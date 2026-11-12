@@ -61,7 +61,7 @@ body {
     align-items: center;
     justify-content: space-between;
     min-height: calc(50vh - 6rem);
-    padding: 0 10rem;
+    padding: 0 5rem;
     box-sizing: border-box;
 }
 
@@ -185,4 +185,68 @@ body {
     color: #0B1418;
     border-radius: 0.5rem;
     box-shadow: 0 0 18px rgba(63, 184, 201, 0.85);
+}
+
+.features {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 4rem 5rem;
+    box-sizing: border-box;
+}
+
+.features div:nth-child(-n+3) {
+    grid-column: span 2;
+}
+
+.features div:nth-child(n+4) {
+    grid-column: span 3;
+    width: fit-content;
+    max-width: 100%;
+    justify-self: center;
+}
+
+.features div:nth-child(n+4) img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.features div:nth-child(n+5) {
+    grid-column: span 1;
+    width: fit-content;
+    max-width: 100%;
+    justify-self: center;
+}
+
+.features div {
+    background-color: #13232A;
+    border: 1px solid #22383F;
+    border-radius: 0.5rem;
+    padding: 1rem 1rem 1rem 1rem;
+}
+
+.features h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: #E6F0EC;
+    font-family: Press start 2P, sans-serif;
+}
+
+.features p {
+    color: #8FA6A0;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+}
+
+.controlboxes {
+    display: inline-block;
+    background-color: #13232A;
+    border: 1px solid #22383F;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    margin-right: 0.5rem;
+    font-size: 0.9rem;
+    color: #E6F0EC;
 }
