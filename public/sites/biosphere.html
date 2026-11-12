@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>BIOSPHERE</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121820;--panel2:#19222d;--line:#263243;--txt:#cfd8e3;--dim:#7d8b9c;--acc:#5ec8a8}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--txt);font:13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+body{display:grid;grid-template-rows:auto 1fr auto}
+button,select,input{font:inherit;color:inherit}
+button,select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer}
+button:hover{border-color:#3b4c63}
+button.on{border-color:var(--acc);color:var(--acc)}
+header{display:flex;gap:6px;align-items:center;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:14px;letter-spacing:.18em;margin:0 8px 0 0;color:var(--acc);font-weight:600}
+header .sp{flex:1}
+#clock{color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+main{display:flex;min-height:0}
+#stage{flex:1;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;padding:8px;position:relative}
+#view{image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;cursor:crosshair;display:block}
+#hint{position:absolute;left:12px;bottom:8px;color:var(--dim);font-size:12px;pointer-events:none;text-shadow:0 1px 2px #000}
+aside{width:320px;overflow:auto;background:var(--panel);border-left:1px solid var(--line)}
+aside section{border-bottom:1px solid var(--line)}
+aside h2{margin:0;padding:7px 10px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);cursor:pointer;user-select:none}
+aside h2:hover{color:var(--txt)}
+aside .body{padding:4px 10px 10px}
+aside section.closed .body{display:none}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:1px 10px}
+.kv span:nth-child(odd){color:var(--dim)}
+.gene{display:grid;grid-template-columns:118px 1fr 62px;gap:6px;align-items:center;font-size:12px;margin:2px 0}
+.gene .bar{height:6px;background:#0c1118;border-radius:3px;overflow:hidden}
+.gene .bar i{display:block;height:100%;background:var(--acc)}
+.gene em{font-style:normal;color:var(--dim);text-align:right}
+.cap{font-size:11px;color:var(--dim);margin:8px 0 2px;display:flex;justify-content:space-between;align-items:center}
+.cap select{padding:1px 4px;font-size:11px}
+canvas.chart{width:100%;height:96px;display:block;background:#0c1118;border-radius:4px}
+footer{background:var(--panel);border-top:1px solid var(--line);padding:5px 10px 7px}
+#tabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+#tabs .tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;color:var(--dim);padding:3px 8px}
+#tabs .tab.on{color:var(--txt);border-bottom-color:var(--acc)}
+#brushbox{margin-left:auto;display:flex;gap:6px;align-items:center;color:var(--dim)}
+#elems{display:flex;gap:5px;margin-top:5px;overflow-x:auto;padding-bottom:2px}
+.elem{display:flex;align-items:center;gap:6px;white-space:nowrap;padding:5px 10px}
+.elem i{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid #0006}
+.elem small{color:var(--dim);font-size:10px}
+.modal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:10}
+.modal.hide{display:none}
+.modal>div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;max-width:min(880px,94vw);max-height:88vh;overflow:auto;min-width:300px}
+.modal h3{margin:0 0 10px;font-size:15px}
+.modal h4{margin:14px 0 6px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.row{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
+.row label{min-width:150px;color:var(--dim)}
+.row output{min-width:54px;color:var(--txt)}
+.slot{display:grid;grid-template-columns:90px 1fr auto auto auto;gap:6px;align-items:center;margin:4px 0}
+.slot span{color:var(--dim);font-size:12px}
+#treeWrap{overflow:auto;max-height:66vh;background:#0c1118;border-radius:6px}
+kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px;font:12px ui-monospace,monospace}
+@media (max-width:900px){
+  aside{position:fixed;right:0;top:44px;max-height:55vh;width:min(320px,92vw);z-index:5;border:1px solid var(--line)}
+  header h1{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>BIOSPHERE</h1>
+  <button id="bPause" title="Pause (Leertaste)">⏸</button>
+  <button id="bStep" title="Einzelschritt">⏭</button>
+  <select id="sSpeed" title="Geschwindigkeit">
+    <option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option>
+  </select>
+  <select id="sOverlay" title="Ansicht">
+    <option value="0">Ansicht: Normal</option><option value="1">Temperatur</option><option value="2">Licht</option><option value="3">Sauerstoff</option><option value="4">Arten</option>
+  </select>
+  <button id="bInsp" title="Inspektor (I)">Inspektor</button>
+  <button id="bStats" title="Statistik (S)">Statistik</button>
+  <button id="bTree">Stammbaum</button>
+  <button id="bWorld">Welten</button>
+  <button id="bSet">Einstellungen</button>
+  <button id="bHelp">?</button>
+  <span class="sp"></span>
+  <span id="clock"></span>
+</header>
+<main>
+  <div id="stage"><canvas id="view"></canvas><div id="hint"></div></div>
+  <aside id="side">
+    <section id="secInsp">
+      <h2>Inspektor</h2>
+      <div class="body">
+        <div class="kv" id="cellInfo"></div>
+        <div id="creature"></div>
+      </div>
+    </section>
+    <section id="secStats">
+      <h2>Statistik</h2>
+      <div class="body">
+        <div class="cap"><span>Populationen (Gruppen)</span></div><canvas class="chart" id="ch1"></canvas>
+        <div class="cap"><span>Populationen pro Art</span></div><canvas class="chart" id="ch2"></canvas>
+        <div class="cap"><span>O₂ / CO₂ gesamt</span></div><canvas class="chart" id="ch3"></canvas>
+        <div class="cap"><span>Gen-Durchschnitt</span><select id="sGene"></select></div><canvas class="chart" id="ch4"></canvas>
+      </div>
+    </section>
+  </aside>
+</main>
+<footer>
+  <div id="tabs"></div>
+  <div id="elems"></div>
+</footer>
+
+<div class="modal hide" id="mWorld"><div>
+  <h3>Welten &amp; Speicherstände</h3>
+  <h4>Vorlagen</h4>
+  <div class="row" id="tplRow"></div>
+  <h4>Speicherplätze (localStorage)</h4>
+  <div id="slots"></div>
+  <h4>Datei</h4>
+  <div class="row"><button id="bExport">Als JSON exportieren</button><button id="bImport">JSON importieren</button><input type="file" id="fImport" accept=".json,application/json" hidden></div>
+  <div class="row" id="saveMsg" style="color:var(--dim)"></div>
+  <div class="row"><button data-close>Schließen</button></div>
+</div></div>
+
+<div class="modal hide" id="mSet"><div>
+  <h3>Einstellungen</h3>
+  <div class="row"><label>Mutationsrate</label><input type="range" id="rMut" min="0" max="5" step="0.1"><output id="oMut"></output></div>
+  <div class="row"><label>Tag-Nacht-Dauer</label><input type="range" id="rDay" min="0" max="600" step="10"><output id="oDay"></output></div>
+  <div class="row"><label>Umgebungstemperatur</label><input type="range" id="rAmb" min="-10" max="45" step="1"><output id="oAmb"></output></div>
+  <div class="row"><label>Grid-Größe</label><select id="sGrid"><option>160×100</option><option>240×160</option><option>320×200</option><option>400×260</option></select><span style="color:var(--dim)">(erstellt die Welt neu)</span></div>
+  <div class="row"><label>Glas-Orb (geschlossen)</label><input type="checkbox" id="cOrb"></div>
+  <div class="row"><button data-close>Schließen</button></div>
+</div></div>
+
+<div class="modal hide" id="mTree"><div>
+  <h3>Stammbaum der Arten</h3>
+  <div class="row"><label style="min-width:0"><input type="checkbox" id="cTreeAll"> auch kurzlebige Arten zeigen</label></div>
+  <div id="treeWrap"><canvas id="treeCv"></canvas></div>
+  <div class="row"><button data-close>Schließen</button></div>
+</div></div>
+
+<div class="modal hide" id="mHelp"><div>
+  <h3>BIOSPHERE – Kurzanleitung</h3>
+  <p>Baue eine Welt aus Materialien, setze Lebewesen aus und beobachte, wie ein Ökosystem entsteht und sich die Arten über Generationen verändern. Es gibt kein Game Over.</p>
+  <p><kbd>Linke Maustaste</kbd> zeichnen · <kbd>Rechte Maustaste</kbd> radieren · <kbd>Mausrad</kbd> Pinselgröße<br>
+  <kbd>Leertaste</kbd> Pause · <kbd>1</kbd>–<kbd>9</kbd> Elemente des aktuellen Tabs · <kbd>I</kbd> Inspektor · <kbd>S</kbd> Statistik</p>
+  <p><b>Kreislauf:</b> Algen und Pflanzen binden CO₂ und Nährstoffe und geben O₂ ab. Daphnien und Schnecken fressen Algen, Fische fressen Daphnien. Alles Tote wird zu Detritus, den Bakterien wieder zu Nährstoffen und CO₂ abbauen.</p>
+  <p><b>Gut zu wissen:</b> Daphnien fressen vor allem junge, frei schwebende Algen; ausgewachsene Algen sind zäh, den Algenfilm auf Oberflächen weiden nur Schnecken ab (sie fressen auch Detritus). Bei hoher Dichte bremst Dichtestress die Vermehrung. Daphnien legen Dauereier, die schlüpfen, wenn die Population eingebrochen ist.</p>
+  <p><b>Evolution:</b> Tiere vererben ihre Gene mit kleinen Mutationen. Tipp: Umgebungstemperatur (Einstellungen) oder Salzgehalt ändern, Heizer/Kühler setzen und im Statistik-Panel die Gen-Durchschnitte verfolgen.</p>
+  <div class="row"><button data-close>Schließen</button></div>
+</div></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   BIOSPHERE – Falling-Sand + Ökosystem + Evolution in einer Datei.
+   Abschnitte:
+     0  Hilfsfunktionen / Zufall
+     1  Materialien (datengetriebene Elementtabelle)
+     2  Welt / Grid (Typed Arrays)
+     3  Physik (Bewegung, Temperatur, Reaktionen, Feuer)
+     4  Ökosystem (Licht, Gase, Nährstoffe, Algen, Pflanzen, Bakterien)
+     5  Genetik & Tiere (Genom, Verhalten, Fortpflanzung, Artbildung)
+     6  Simulationsschleife & Statistik
+     7  Rendering
+     8  UI (Werkzeuge, Inspektor, Diagramme, Stammbaum)
+     9  Speichern / Laden / Vorlagen
+   ===================================================================== */
+
+// ===== 0. Hilfsfunktionen ============================================
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+let seed = (Math.random() * 0xffffffff) >>> 0 || 88172645;
+function ri() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return seed >>> 0; } // xorshift32
+function rf() { return ri() / 4294967296; }
+function gauss() { return (rf() + rf() + rf() + rf() - 2) * 1.732; }
+
+// ===== 1. Materialien ================================================
+// Aggregatzustände
+const ST = { NONE: 0, SOLID: 1, POWDER: 2, LIQUID: 3, GAS: 4, ENERGY: 5 };
+const DEF = [], E = {};
+/* Felder einer Elementdefinition:
+   name, cat (Tab), st (Zustand), col [r,g,b], v (Farbvariation), dens (Dichte),
+   cond (Wärmeleitfähigkeit 0..1), trans (Lichtdurchlässigkeit 0..1),
+   perm (Gasdiffusion O₂/CO₂), nperm (Nährstoffdiffusion),
+   hi:[T,Ziel,p] / lo:[T,Ziel,p]  Zustandswechsel über/unter Temperatur,
+   flam (Entzündungswahrsch.), burn (Brenndauer), ash (hinterlässt Asche),
+   spawnT (Temperatur beim Platzieren), fixT (hält feste Temperatur),
+   slide (Rutschneigung Pulver), flow (Fließweite), visc (Zähigkeit),
+   sparse (Pinsel streut), emis (leuchtet selbst),
+   rx: [[Partner, selbstWird, partnerWird, p, nährstoffBonus]] Reaktionen */
+function el(key, name, cat, st, col, o) {
+  const d = Object.assign({ key, name, cat, st, col, v: 10, dens: 1000, cond: .2, trans: 0, perm: 0, nperm: 0, flam: 0 }, o);
+  d.id = DEF.length; E[key] = d.id; DEF.push(d);
+}
+el('EMPTY', 'Luft', null, ST.NONE, [24, 32, 50], { v: 0, dens: 1.2, cond: .35, trans: 1, perm: .45 });
+el('VOID', 'Außenwelt', null, ST.NONE, [11, 15, 20], { v: 0, cond: 0, trans: 1 });
+// Feststoffe
+el('GLASS', 'Glas', 'Feststoffe', ST.SOLID, [150, 190, 205], { v: 6, cond: .12, trans: .97 });
+el('STONE', 'Stein', 'Feststoffe', ST.SOLID, [112, 112, 118], { v: 14, cond: .2, hi: [1250, 'LAVA', .05] });
+el('WOOD', 'Holz', 'Feststoffe', ST.SOLID, [120, 82, 48], { v: 12, cond: .05, flam: .05, burn: 160, ash: 1, hi: [300, 'FIRE', .05] });
+el('METAL', 'Metall', 'Feststoffe', ST.SOLID, [150, 156, 168], { v: 8, cond: .9 });
+el('ICE', 'Eis', 'Feststoffe', ST.SOLID, [170, 215, 240], { v: 8, cond: .3, trans: .9, spawnT: -15, hi: [1, 'WATER', .1], rx: [['SALT', 'SALTWATER', 'EMPTY', .02]] });
+// Pulver
+el('SAND', 'Sand', 'Pulver', ST.POWDER, [214, 190, 130], { v: 14, dens: 1600, cond: .15, nperm: .04, slide: 1, sparse: 1, hi: [1100, 'GLASS', .05] });
+el('SOIL', 'Erde', 'Pulver', ST.POWDER, [96, 68, 44], { v: 12, dens: 1400, cond: .12, nperm: .04, slide: .5, sparse: 1 });
+el('GRAVEL', 'Kies', 'Pulver', ST.POWDER, [128, 122, 114], { v: 22, dens: 1800, cond: .18, nperm: .06, slide: .25, sparse: 1 });
+el('SALT', 'Salz', 'Pulver', ST.POWDER, [232, 232, 236], { v: 10, dens: 1500, slide: .9, sparse: 1, rx: [['WATER', 'EMPTY', 'SALTWATER', .05]] });
+el('ASH', 'Asche', 'Pulver', ST.POWDER, [92, 90, 92], { v: 14, dens: 1100, slide: .9, sparse: 1, rx: [['WATER', 'EMPTY', null, .003, .3]] });
+// Flüssigkeiten
+el('WATER', 'Süßwasser', 'Flüssigkeiten', ST.LIQUID, [36, 92, 168], { v: 4, dens: 1000, cond: .5, trans: .985, perm: .25, nperm: .25, flow: 4, sparse: 1, lo: [0, 'ICE', .08], hi: [100, 'STEAM', .2] });
+el('SALTWATER', 'Salzwasser', 'Flüssigkeiten', ST.LIQUID, [30, 110, 150], { v: 4, dens: 1030, cond: .5, trans: .985, perm: .25, nperm: .25, flow: 4, sparse: 1, lo: [-6, 'ICE', .08], hi: [103, 'STEAM', .2] });
+el('OIL', 'Öl', 'Flüssigkeiten', ST.LIQUID, [70, 52, 30], { v: 6, dens: 850, cond: .15, trans: .7, flow: 3, sparse: 1, flam: .12, burn: 50, hi: [260, 'FIRE', .1] });
+el('LAVA', 'Lava', 'Flüssigkeiten', ST.LIQUID, [235, 96, 28], { v: 26, dens: 2800, cond: .35, flow: 1, visc: .75, sparse: 1, emis: 1, spawnT: 1400, lo: [900, 'STONE', .05],
+  rx: [['WATER', 'STONE', 'STEAM', .4], ['SALTWATER', 'STONE', 'STEAM', .4], ['ICE', 'STONE', 'WATER', .5]] });
+// Gase
+el('STEAM', 'Dampf', 'Gase', ST.GAS, [200, 210, 222], { v: 12, dens: .6, cond: .04, trans: .9, sparse: 1, spawnT: 120, lo: [96, 'WATER', .02] });
+el('SMOKE', 'Rauch', 'Gase', ST.GAS, [70, 70, 76], { v: 12, dens: .9, cond: .1, trans: .7, sparse: 1 });
+el('O2', 'Sauerstoff', 'Gase', ST.GAS, [150, 205, 255], { v: 10, dens: 1.1, cond: .2, trans: 1, sparse: 1 });
+el('CO2', 'Kohlendioxid', 'Gase', ST.GAS, [150, 140, 150], { v: 10, dens: 1.9, cond: .2, trans: 1, sparse: 1 });
+// Energie
+el('FIRE', 'Feuer', 'Energie', ST.ENERGY, [255, 150, 40], { v: 40, dens: .3, cond: .3, trans: 1, perm: .45, emis: 1, sparse: 1, spawnT: 600 });
+el('LAMP', 'Licht', 'Energie', ST.SOLID, [255, 240, 170], { v: 6, cond: .1, emis: 1 });
+el('HEATER', 'Heizer', 'Energie', ST.SOLID, [190, 70, 50], { v: 8, cond: 1, fixT: 80, emis: 1 });
+el('COOLER', 'Kühler', 'Energie', ST.SOLID, [70, 130, 200], { v: 8, cond: 1, fixT: -2, emis: 1 });
+// Leben (zellbasierte Organismen)
+el('ALGAE', 'Algen', 'Leben', ST.SOLID, [60, 170, 70], { v: 22, cond: .5, trans: .8, perm: .2, nperm: .25, sparse: 1, flam: .01, burn: 20 });
+el('PLANT', 'Pflanze / Gras', 'Leben', ST.SOLID, [38, 132, 60], { v: 18, cond: .3, trans: .85, perm: .2, nperm: .2, flam: .03, burn: 40, ash: 1 });
+el('BACT', 'Bakterien', 'Leben', ST.POWDER, [196, 160, 96], { v: 18, dens: 1050, cond: .4, trans: .6, perm: .2, nperm: .12, slide: .6, sparse: 1 });
+el('DETRITUS', 'Detritus', 'Leben', ST.POWDER, [86, 74, 52], { v: 14, dens: 1050, cond: .4, trans: .6, perm: .2, nperm: .12, slide: .6, sparse: 1, flam: .02, burn: 30, ash: 1 });
+
+const NT = DEF.length;
+const { EMPTY, VOID, GLASS, STONE, WOOD, ICE, SAND, SOIL, GRAVEL, SALT, ASH, WATER, SALTWATER, LAVA, STEAM, SMOKE, O2, CO2, FIRE, LAMP, HEATER, ALGAE, PLANT, BACT, DETRITUS } = E;
+
+// Aus der Definitionstabelle abgeleitete, schnelle Lookup-Tabellen
+const tState = new Uint8Array(NT), tDens = new Float32Array(NT), tCond = new Float32Array(NT), tTrans = new Float32Array(NT),
+  tPerm = new Float32Array(NT), tNperm = new Float32Array(NT), tFlam = new Float32Array(NT), tBurn = new Uint16Array(NT), tAsh = new Uint8Array(NT),
+  hiT = new Float32Array(NT).fill(Infinity), hiTo = new Uint8Array(NT), hiP = new Float32Array(NT),
+  loT = new Float32Array(NT).fill(-Infinity), loTo = new Uint8Array(NT), loP = new Float32Array(NT),
+  fixT = new Float32Array(NT).fill(NaN), tPass = new Uint8Array(NT), isWater = new Uint8Array(NT), isSoil = new Uint8Array(NT),
+  solidish = new Uint8Array(NT), wetish = new Uint8Array(NT), tSlide = new Float32Array(NT), tFlow = new Uint8Array(NT), tVisc = new Float32Array(NT),
+  hasRx = new Uint8Array(NT), rxOf = new Array(NT * NT).fill(null);
+for (const d of DEF) {
+  const i = d.id;
+  tState[i] = d.st; tDens[i] = d.dens; tCond[i] = d.cond; tTrans[i] = d.trans; tPerm[i] = d.perm; tNperm[i] = d.nperm;
+  tFlam[i] = d.flam; tBurn[i] = d.burn || 40; tAsh[i] = d.ash ? 1 : 0;
+  if (d.hi) { hiT[i] = d.hi[0]; hiTo[i] = E[d.hi[1]]; hiP[i] = d.hi[2]; }
+  if (d.lo) { loT[i] = d.lo[0]; loTo[i] = E[d.lo[1]]; loP[i] = d.lo[2]; }
+  if (d.fixT !== undefined) fixT[i] = d.fixT;
+  tPass[i] = (i === EMPTY || d.st === ST.GAS || d.st === ST.ENERGY) ? 1 : d.st === ST.LIQUID ? 2 : 0; // 1 = frei, 2 = Flüssigkeit
+  tSlide[i] = d.slide || 0; tFlow[i] = d.flow || 0; tVisc[i] = d.visc || 0;
+  solidish[i] = ((d.st === ST.SOLID || d.st === ST.POWDER) && i !== ALGAE && i !== DETRITUS && i !== BACT) ? 1 : 0;
+}
+isWater[WATER] = isWater[SALTWATER] = 1; wetish[WATER] = wetish[SALTWATER] = wetish[ALGAE] = 1;
+isSoil[SAND] = isSoil[SOIL] = isSoil[GRAVEL] = 1;
+for (const d of DEF) for (const r of (d.rx || [])) {       // Reaktionen in beide Richtungen eintragen
+  const o = E[r[0]], a = r[1] === null ? -1 : E[r[1]], b = r[2] === null ? -1 : E[r[2]];
+  rxOf[d.id * NT + o] = { a, b, p: r[3], na: 0, nb: r[4] || 0 };
+  rxOf[o * NT + d.id] = { a: b, b: a, p: r[3], na: r[4] || 0, nb: 0 };
+  hasRx[d.id] = hasRx[o] = 1;
+}
+
+// ===== 2. Welt / Grid ================================================
+let W = 240, H = 160, N = W * H;
+let type, rnd, upd, light, life, age, temp, o2, co2, nut;   // Typed Arrays, eine Zelle = ein Index
+let NB4, NB8;
+const DX8 = [-1, 0, 1, 1, 1, 0, -1, -1], DY8 = [-1, -1, -1, 0, 1, 1, 1, 0];
+let tick = 0, cur = 0;
+const settings = { orb: true, mut: 1, dayLen: 120, amb: 22 };
+let curTemplate = 'balanced';
+
+function allocate(w, h) {
+  W = w; H = h; N = w * h;
+  type = new Uint8Array(N); rnd = new Uint8Array(N); upd = new Uint8Array(N); light = new Uint8Array(N);
+  life = new Uint16Array(N); age = new Uint16Array(N);       // Zusatzdaten pro Zelle (Wachstum/Alter/Brenndauer …)
+  temp = new Float32Array(N); o2 = new Float32Array(N); co2 = new Float32Array(N); nut = new Float32Array(N);
+  NB4 = [-W, 1, W, -1]; NB8 = [-W - 1, -W, -W + 1, 1, W + 1, W, W - 1, -1];
+}
+function inOrb(x, y, shrink) {
+  const cy = (H - 1) / 2, cx = (W - 1) / 2, ry = H / 2 - 1.5 - shrink, rx = Math.min(W / 2 - 1.5, (H / 2 - 1.5) * 1.42) - shrink;
+  const dx = (x - cx) / rx, dy = (y - cy) / ry; return dx * dx + dy * dy <= 1;
+}
+function newWorld(orb) {
+  allocate(W, H);
+  settings.orb = orb;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x; rnd[i] = ri() & 63; temp[i] = settings.amb;
+    if (x === 0 || y === 0 || x === W - 1 || y === H - 1) type[i] = VOID;
+    else if (orb) type[i] = !inOrb(x, y, 0) ? VOID : !inOrb(x, y, 2.2) ? GLASS : EMPTY;
+  }
+  tick = 0; agents = []; newborn.length = 0; species = []; selAgent = null; nextAgentId = 1;
+  resetHist();
+}
+function initFields() {                                   // Startwerte für Gase und Nährstoffe
+  for (let i = 0; i < N; i++) {
+    const t = type[i];
+    o2[i] = isWater[t] ? .8 : 1; co2[i] = .45;
+    nut[i] = isWater[t] ? .2 : t === SOIL ? .5 : t === SAND ? .08 : t === GRAVEL ? .05 : 0;
+  }
+}
+function setCell(i, id) {
+  if (id < 0) return;
+  type[i] = id; rnd[i] = ri() & 63; upd[i] = cur; age[i] = 0;
+  life[i] = id === FIRE ? 30 + (ri() & 31) : id === SMOKE ? 120 + (ri() & 127) : 0;
+}
+// rnd-Bits 6/7 merken, ob (und welches) Wasser ein Organismus verdrängt hat – beim Abbau wird es zurückgegeben
+function wetBits(t) { return t === WATER ? 128 : t === SALTWATER ? 192 : 0; }
+function liquidOf(r) { return r & 128 ? (r & 64 ? SALTWATER : WATER) : EMPTY; }
+function place(i, id) {                                    // Platzieren durch Spieler/Vorlage
+  const prev = type[i];
+  setCell(i, id);
+  if (id >= ALGAE) rnd[i] |= wetBits(prev);
+  const s = DEF[id].spawnT; if (s !== undefined) temp[i] = s;
+  if (id === BACT) { life[i] = 300; age[i] = 450; }
+  else if (id === DETRITUS) { life[i] = 1000; age[i] = 1500; }
+  else if (id === ALGAE) age[i] = ri() % ALG_AGE;          // gemischte Altersstruktur statt gleichzeitigem Absterben
+}
+function swap(i, j) {
+  let a = type[i]; type[i] = type[j]; type[j] = a;
+  a = rnd[i]; rnd[i] = rnd[j]; rnd[j] = a;
+  a = life[i]; life[i] = life[j]; life[j] = a;
+  a = age[i]; age[i] = age[j]; age[j] = a;
+  const f = temp[i]; temp[i] = temp[j]; temp[j] = f;
+  upd[i] = upd[j] = cur;
+}
+
+// ===== 3. Physik =====================================================
+function movePowder(i, t) {
+  const d = tDens[t]; let j = i + W, tj = type[j], p = tPass[tj];
+  if (p === 1 || (p === 2 && tDens[tj] < d && (ri() & 1))) { swap(i, j); return; }
+  if (rf() > tSlide[t]) return;
+  const s = (ri() & 1) ? 1 : -1;
+  for (let n = 0; n < 2; n++) {
+    const sd = n ? -s : s; j = i + W + sd; tj = type[j]; p = tPass[tj];
+    if ((p === 1 || (p === 2 && tDens[tj] < d && (ri() & 1))) && tPass[type[i + sd]]) { swap(i, j); return; }
+  }
+}
+function moveLiquid(i, t) {
+  const d = tDens[t];
+  if (tVisc[t] && rf() < tVisc[t]) return;
+  let j = i + W, tj = type[j], p = tPass[tj];
+  if (p === 1 || (p === 2 && tDens[tj] < d && (ri() & 1))) { swap(i, j); return; }
+  const s = (ri() & 1) ? 1 : -1;
+  for (let n = 0; n < 2; n++) {
+    const sd = n ? -s : s; j = i + W + sd; tj = type[j]; p = tPass[tj];
+    if ((p === 1 || (p === 2 && tDens[tj] < d && (ri() & 1))) && tPass[type[i + sd]]) { swap(i, j); return; }
+  }
+  const fl = tFlow[t];                                     // seitlich ausbreiten
+  for (let n = 0; n < 2; n++) {
+    const sd = n ? -s : s; let q = i;
+    for (let k = 0; k < fl; k++) { const tq = type[q + sd]; if (tPass[tq] === 1) q += sd; else break; }
+    if (q !== i) { swap(i, q); return; }
+    tj = type[i + sd];                                     // schwerere Flüssigkeit schiebt sich unter leichtere
+    if (tPass[tj] === 2 && tDens[tj] < d && (ri() & 7) === 0) { swap(i, i + sd); return; }
+  }
+}
+function moveGas(i, t) {
+  if (ri() & 1) return;
+  const d = tDens[t]; let j = i - W, tj = type[j];
+  if (tPass[tj] === 2) { swap(i, j); return; }             // Blase steigt durch Flüssigkeit
+  const s = (ri() & 1) ? 1 : -1;
+  if (d < 1.2) {                                           // leichter als Luft: steigt
+    if (tj === EMPTY || (tState[tj] === ST.GAS && tDens[tj] > d)) { swap(i, j); return; }
+    if (type[j + s] === EMPTY) { swap(i, j + s); return; }
+  } else if ((ri() & 3) === 0 && type[i + W] === EMPTY) { swap(i, i + W); return; }
+  j = i + s; tj = type[j];
+  if (tj === EMPTY || (tPass[tj] === 2 && tPass[type[i + W]] === 2)) swap(i, j);
+}
+function ignite(j) {
+  const t = type[j];
+  type[j] = FIRE; rnd[j] = ri() & 63; life[j] = (tBurn[t] * (.5 + rf())) | 0; age[j] = tAsh[t] ? 1 : 2;
+  if (temp[j] < 600) temp[j] = 600; upd[j] = cur;
+}
+function transmute(i, to, from) {
+  if (to === FIRE) { ignite(i); return; }
+  setCell(i, to);
+  if (from === SALTWATER && to === STEAM && rf() < .3) setCell(i, SALT);   // Verdunsten hinterlässt Salz
+}
+function respire(i, c) { co2[i] += c; const v = o2[i] - c; o2[i] = v < 0 ? 0 : v; }
+
+// --- Spezialverhalten einzelner Elemente (true = Zelle wurde ersetzt) ---
+function updFire(i) {
+  if (temp[i] < 550) temp[i] = 550;
+  let l = life[i];
+  if (o2[i] < .04) l = l > 4 ? l - 4 : 0;                  // erstickt ohne Sauerstoff
+  else if ((ri() & 3) === 0) respire(i, .012);
+  const j = i + NB8[ri() & 7], tj = type[j];
+  if (tFlam[tj] && rf() < tFlam[tj]) ignite(j);
+  else if (isWater[tj]) { setCell(i, SMOKE); return true; }
+  if ((ri() & 15) === 0 && type[i - W] === EMPTY) setCell(i - W, SMOKE);
+  if (l <= 1) { const f = age[i]; setCell(i, f === 1 && rf() < .4 ? ASH : rf() < .4 ? SMOKE : EMPTY); return true; }
+  life[i] = l - 1;
+  if (age[i] === 0 && type[i - W] === EMPTY && (ri() & 3) === 0) swap(i, i - W);
+  return true;
+}
+function updSmoke(i) {
+  const l = life[i];
+  if (l <= 1) { co2[i] += .02; setCell(i, EMPTY); return true; }
+  life[i] = l - 1; return false;
+}
+function updLava(i) {
+  if ((ri() & 3) === 0) { const j = i + NB4[ri() & 3]; if (tFlam[type[j]]) ignite(j); }
+  return false;
+}
+function updGasO2(i) { return dissolve(i, o2); }
+function updGasCO2(i) { return dissolve(i, co2); }
+function dissolve(i, field) {                              // Gaspartikel gehen in das Gasfeld (Luft/Wasser) über
+  const near = isWater[type[i + W]] || isWater[type[i - W]] || isWater[type[i + 1]] || isWater[type[i - 1]];
+  if ((ri() & 63) < (near ? 16 : 2)) { field[i] += 1; setCell(i, EMPTY); return true; }
+  return false;
+}
+
+// ===== 4. Ökosystem ==================================================
+const GAS_K = 1.5;        // Gaseinheiten (CO₂ → O₂) pro Algenzelle
+const E_ALGA = 150;        // Energie, die eine Algenzelle einem Fresser liefert
+const CE = GAS_K / E_ALGA;// Gasverbrauch pro verbrauchter Energieeinheit
+const ALG_GROW = 40, ALG_AGE = 600, ALG_YOUNG = 120, PL_GROW = 15, BACT_RATE = 20;
+
+function toDetritus(i, n) {                                // life = Nährstoff ×1000, age = Kohlenstoff ×1000
+  type[i] = DETRITUS; rnd[i] = (rnd[i] & 192) | (ri() & 63); upd[i] = cur;
+  life[i] = n > 65535 ? 65535 : n; const c = n * GAS_K; age[i] = c > 65535 ? 65535 : c;
+}
+function photo(i, rate) {                                  // Photosynthese: CO₂ + Nährstoffe + Licht → Biomasse + O₂
+  const L = light[i]; if (L < 10) return 0;
+  const tf = 1 - Math.abs(temp[i] - 24) / 24; if (tf <= 0) return 0;
+  let g = rate * (L > 110 ? 1 : L / 110) * tf * .001;
+  const n = nut[i] * .5, c = co2[i] * .5 / GAS_K; if (n < g) g = n; if (c < g) g = c;
+  const gi = (g * 1000) | 0; if (gi <= 0) return 0;
+  g = gi * .001; nut[i] -= g; co2[i] -= g * GAS_K; o2[i] += g * GAS_K;
+  return gi;
+}
+function updAlgae(i) {
+  if (ri() & 7) return false;
+  const a = age[i] + 1; age[i] = a; const T = temp[i];
+  if (a > ALG_AGE + (rnd[i] & 63) * 8 || T > 45 || T < -1 ||
+    !(wetish[type[i + 1]] || wetish[type[i - 1]] || wetish[type[i + W]] || wetish[type[i - W]])) { toDetritus(i, 1000 + life[i]); return true; }
+  let l = life[i];
+  if (l < 1000) { l += photo(i, ALG_GROW); life[i] = l; }
+  if (l >= 1000) { const j = i + NB8[ri() & 7], tj = type[j]; if (isWater[tj]) { setCell(j, ALGAE); rnd[j] |= wetBits(tj); life[i] = l - 1000; } }   // Teilung
+  return false;
+}
+function updPlant(i) {
+  if (ri() & 15) return false;
+  const b = type[i + W], T = temp[i];
+  if (!(b === PLANT || isSoil[b] || type[i + W - 1] === PLANT || type[i + W + 1] === PLANT) || T > 50 || T < -5) { toDetritus(i, 1000 + life[i]); return true; }
+  let l = life[i];
+  if (l < 1000) { l += photo(i, PL_GROW); life[i] = l; }
+  const up = type[i - W];
+  if (l >= 1000 && up !== PLANT && type[i - W - 1] !== PLANT && type[i - W + 1] !== PLANT) {   // nur Triebspitzen wachsen
+    let h = 1, q = i + W; while (type[q] === PLANT && h < 24) { h++; q += W; }
+    const aquatic = isWater[up] || isWater[type[i - 1]] || isWater[type[i + 1]];
+    const maxH = aquatic ? 4 + ((i % W) * 7) % 6 : 2;
+    if (h < maxH) {
+      const j = i - W + ((ri() % 5 === 0) ? ((ri() & 1) ? 1 : -1) : 0), tj = type[j];
+      if (aquatic ? isWater[tj] : tj === EMPTY) { setCell(j, PLANT); rnd[j] |= wetBits(tj); life[i] = l - 1000; }
+    } else if ((ri() & 3) === 0) {                         // Ableger auf freiem Substrat
+      const base = q - W, bx = base % W, dx = (3 + ri() % 9) * ((ri() & 1) ? 1 : -1);
+      if (bx + dx > 2 && bx + dx < W - 3) {
+        const j = base + dx, tj = type[j];
+        if ((aquatic ? isWater[tj] : tj === EMPTY) && isSoil[type[j + W]] &&
+          type[j - 1] !== PLANT && type[j + 1] !== PLANT && type[j - 2] !== PLANT && type[j + 2] !== PLANT && type[j - 3] !== PLANT && type[j + 3] !== PLANT) { setCell(j, PLANT); rnd[j] |= wetBits(tj); life[i] = l - 1000; }
+      }
+    } else if (rf() < .02) { toDetritus(i, 1000 + l); return true; }     // alte Spitzen sterben ab
+  }
+  return false;
+}
+function updDetritus(i) {
+  if (ri() & 7) return false;
+  if (life[i] === 0) { setCell(i, liquidOf(rnd[i])); return true; }
+  if ((ri() & 63) === 0 && o2[i] > .05) type[i] = BACT;    // Sporen besiedeln totes Material
+  return false;
+}
+function updBact(i) {                                      // Zersetzung: Detritus + O₂ → Nährstoffe + CO₂
+  if (ri() & 7) return false;
+  const l = life[i];
+  if (l === 0) { setCell(i, liquidOf(rnd[i])); return true; }
+  const T = temp[i];
+  if (T > 70) { type[i] = DETRITUS; return false; }
+  if (o2[i] < .03) return false;                           // ohne Sauerstoff ruht der Abbau
+  let ds = (BACT_RATE * clamp(T / 22, .1, 1.8)) | 0; if (ds < 1) ds = 1; if (ds > l) ds = l;
+  const a = age[i], c = ds === l ? a : ((a * ds / l) | 0);
+  life[i] = l - ds; age[i] = a - c; nut[i] += ds * .001; respire(i, c * .001);
+  const j = i + NB8[ri() & 7]; if (type[j] === DETRITUS && (ri() & 3) === 0) type[j] = BACT;
+  return false;
+}
+const spec = new Array(NT).fill(null);
+spec[FIRE] = updFire; spec[SMOKE] = updSmoke; spec[LAVA] = updLava; spec[O2] = updGasO2; spec[CO2] = updGasCO2;
+spec[ALGAE] = updAlgae; spec[PLANT] = updPlant; spec[DETRITUS] = updDetritus; spec[BACT] = updBact;
+
+// Hauptdurchlauf über alle Zellen: von unten nach oben, Richtung pro Tick abwechselnd
+function stepCells() {
+  const ltr = (tick & 1) === 0, c = cur;
+  for (let y = H - 2; y >= 1; y--) {
+    const row = y * W;
+    for (let k = 1; k < W - 1; k++) {
+      const i = row + (ltr ? k : W - 1 - k), t = type[i];
+      if (t < 2 || upd[i] === c) continue;
+      const T = temp[i];
+      if (T > hiT[t]) { if (rf() < hiP[t]) { transmute(i, hiTo[t], t); continue; } }
+      else if (T < loT[t]) { if (rf() < loP[t]) { transmute(i, loTo[t], t); continue; } }
+      if (hasRx[t]) {
+        const j = i + NB4[ri() & 3], r = rxOf[t * NT + type[j]];
+        if (r && rf() < r.p) {
+          if (r.na) nut[i] += r.na; if (r.nb) nut[j] += r.nb;
+          setCell(j, r.b); if (r.b === STEAM) temp[j] = 115;
+          setCell(i, r.a); if (r.a === STEAM) temp[i] = 115;
+          continue;
+        }
+      }
+      const sp = spec[t];
+      if (sp !== null && sp(i)) continue;
+      const s = tState[t];
+      if (s === 2) movePowder(i, t); else if (s === 3) moveLiquid(i, t); else if (s === 4) moveGas(i, t);
+    }
+  }
+}
+function stepHeat() {                                      // Wärmeleitung zwischen Nachbarzellen
+  const amb = settings.amb;
+  for (let y = 1; y < H - 1; y++) {
+    for (let i = y * W + 1, e = y * W + W - 1; i < e; i++) {
+      const t = type[i], c = tCond[t];
+      if (c === 0) continue;
+      const f = fixT[t]; if (f === f) { temp[i] = f; continue; }
+      let T = temp[i];
+      T += ((temp[i - 1] + temp[i + 1] + temp[i - W] + temp[i + W]) * .25 - T) * c;
+      if (T < 200) T += (amb - T) * .0002;                 // langsamer Ausgleich mit der Umgebung
+      temp[i] = T;
+    }
+  }
+}
+function stepGas() {                                       // O₂/CO₂ diffundieren paarweise (massenerhaltend)
+  for (let y = 1; y < H - 1; y++) {
+    for (let i = y * W + 1, e = y * W + W - 1; i < e; i++) {
+      const p = tPerm[type[i]]; if (p === 0) continue;
+      let j = i + 1, q = tPerm[type[j]];
+      if (q !== 0) { const r = p < q ? p : q; let d = (o2[j] - o2[i]) * r; o2[i] += d; o2[j] -= d; d = (co2[j] - co2[i]) * r; co2[i] += d; co2[j] -= d; }
+      j = i + W; q = tPerm[type[j]];
+      if (q !== 0) { const r = p < q ? p : q; let d = (o2[j] - o2[i]) * r; o2[i] += d; o2[j] -= d; d = (co2[j] - co2[i]) * r; co2[i] += d; co2[j] -= d; }
+    }
+  }
+}
+function stepNut() {                                       // Nährstoffe in Wasser und Boden
+  for (let y = 1; y < H - 1; y++) {
+    for (let i = y * W + 1, e = y * W + W - 1; i < e; i++) {
+      const p = tNperm[type[i]]; if (p === 0) continue;
+      let j = i + 1, q = tNperm[type[j]];
+      if (q !== 0) { const d = (nut[j] - nut[i]) * (p < q ? p : q); nut[i] += d; nut[j] -= d; }
+      j = i + W; q = tNperm[type[j]];
+      if (q !== 0) { const d = (nut[j] - nut[i]) * (p < q ? p : q); nut[i] += d; nut[j] -= d; }
+    }
+  }
+}
+let dayNow = 1, rowA, rowB;
+function daylight() {
+  if (settings.dayLen <= 0) return 1;
+  const len = settings.dayLen * 60, ph = ((tick + len * .2) % len) / len;
+  const v = .5 - .5 * Math.cos(ph * 6.2832), s = clamp((v - .15) / .3, 0, 1);
+  return .12 + .88 * s * s * (3 - 2 * s);
+}
+function stepLight() {                                     // Licht fällt von oben ein und wird abgeschwächt
+  dayNow = daylight();
+  if (!rowA || rowA.length !== W) { rowA = new Float32Array(W); rowB = new Float32Array(W); }
+  let prev = rowA, nxt = rowB; const top = 255 * dayNow; prev.fill(top);
+  const lamps = [];
+  for (let y = 0; y < H; y++) {
+    const row = y * W;
+    for (let x = 0; x < W; x++) {
+      const i = row + x, t = type[i];
+      const inc = (prev[x > 0 ? x - 1 : 0] + 2 * prev[x] + prev[x < W - 1 ? x + 1 : x]) * .25;
+      light[i] = inc; nxt[x] = inc * tTrans[t];
+      if (t === LAMP && !(type[i - 1] === LAMP && type[i + 1] === LAMP && type[i - W] === LAMP && type[i + W] === LAMP)) lamps.push(i);
+    }
+    const s = prev; prev = nxt; nxt = s;
+  }
+  const R = 24, st = Math.max(1, Math.ceil(lamps.length / 60));
+  for (let k = 0; k < lamps.length; k += st) {             // Lampen strahlen kreisförmig
+    const lx = lamps[k] % W, ly = (lamps[k] / W) | 0;
+    for (let dy = -R; dy <= R; dy++) { const y = ly + dy; if (y < 1 || y >= H - 1) continue;
+      for (let dx = -R; dx <= R; dx++) { const x = lx + dx; if (x < 1 || x >= W - 1) continue;
+        const d = Math.sqrt(dx * dx + dy * dy); if (d > R) continue;
+        const i = y * W + x, v = light[i] + 230 * (1 - d / R) * Math.min(1, st); light[i] = v > 255 ? 255 : v; } }
+  }
+}
+
+// ===== 5. Genetik & Tiere ============================================
+/* Gene sind Zahlen 0..1. Neue Gene: Eintrag in GENES ergänzen, Startwert in KINDS[..].genes
+   anhängen und die Wirkung in derive() (Phänotyp) einbauen. */
+const G_SIZE = 0, G_SPEED = 1, G_SIGHT = 2, G_METAB = 3, G_RTHR = 4, G_NOFF = 5, G_TEMP = 6, G_SALT = 7, G_DIET = 8, G_HUE = 9;
+const GENES = [
+  { n: 'Größe', f: a => a.m.toFixed(2) + '×' },
+  { n: 'Geschwindigkeit', f: a => a.speed.toFixed(2) },
+  { n: 'Sichtweite', f: a => a.sight.toFixed(1) + ' px' },
+  { n: 'Stoffwechsel', f: a => (60 + 80 * a.g[G_METAB]).toFixed(0) + ' %' },
+  { n: 'Fortpfl.-Schwelle', f: a => a.thr.toFixed(0) + ' E' },
+  { n: 'Nachkommen', f: a => '' + a.nOff },
+  { n: 'Wunschtemperatur', f: a => a.prefT.toFixed(1) + ' °C' },
+  { n: 'Salztoleranz', f: a => (a.g[G_SALT] * 100).toFixed(0) + ' %' },
+  { n: 'Ernährung', f: a => a.g[G_DIET] < .35 ? 'Pflanzen' : a.g[G_DIET] > .65 ? 'Fleisch' : 'Allesfr.' },
+  { n: 'Farbton', f: a => '' }];
+const NG = GENES.length;
+const KINDS = [
+  { name: 'Daphnie', genus: 'Daphnia', hue: 48, mass: 1, bodyE: 40, bodyN: .25, basal: .05, moveC: .04, speed: .35, sight: 7, maxAge: 4200, eCap: 600, cool: 200, maxOff: 4, matur: 300,
+    genes: [.5, .5, .5, .5, .5, .25, .5, .15, .08, .5] },
+  { name: 'Fisch', genus: 'Piscis', hue: 12, mass: 8, bodyE: 150, bodyN: 2, basal: .15, moveC: .15, speed: .7, sight: 28, maxAge: 40000, eCap: 6000, cool: 350, maxOff: 2, matur: 2500,
+    genes: [.5, .5, .5, .5, .5, .5, .5, .15, .92, .5] },
+  { name: 'Schnecke', genus: 'Helix', hue: 285, mass: 8, bodyE: 40, bodyN: .5, basal: .025, moveC: .02, speed: 1, sight: 8, maxAge: 16000, eCap: 420, cool: 160, maxOff: 3, matur: 1500,
+    genes: [.5, .5, .5, .5, .5, .34, .5, .15, .04, .5] }];
+const MAXA = 4000, SPEC_THR = .42;
+const CROWD = [1 / 130, 1 / 1400, 1 / 900];   // Dichtestress: Tiere pro Wasserzelle, ab der die Fortpflanzung ganz aussetzt
+const kindN = [0, 0, 0];
+let agents = [], species = [], selAgent = null, nextAgentId = 1;
+const newborn = [];
+
+function hsl(h, s, l) {                                    // → gepackte ABGR-Farbe
+  h = ((h % 360) + 360) % 360; s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  return (255 << 24) | ((f(4) * 255) << 16) | ((f(8) * 255) << 8) | (f(0) * 255 | 0);
+}
+function geneHue(kind, g) { return KINDS[kind].hue + (g[G_HUE] - .5) * 150 + (g[G_DIET] - KINDS[kind].genes[G_DIET]) * 80; }
+function geneColor(kind, g) { return hsl(geneHue(kind, g), 60 + 30 * g[G_SPEED], 62 + 22 * (g[G_TEMP] - .5) - 8 * (g[G_SIZE] - .5)); }
+function cssCol(c) { return 'rgb(' + (c & 255) + ',' + ((c >> 8) & 255) + ',' + ((c >> 16) & 255) + ')'; }
+
+// Phänotyp aus dem Genom ableiten – hier stecken die Trade-offs
+function derive(a) {
+  const g = a.g, K = KINDS[a.kind];
+  const m = .5 + g[G_SIZE]; a.m = m; a.mass = K.mass * m;               // größer: teurer, aber robuster
+  const sp = .35 + g[G_SPEED];
+  a.speed = K.speed * sp * (.8 + .4 * g[G_METAB]);
+  a.moveC = K.moveC * m * sp * sp;                                      // schneller: quadratisch teurer
+  a.basal = K.basal * Math.pow(m, .75) * (.6 + .8 * g[G_METAB]) * (1 + .3 * g[G_SIGHT]);
+  a.sight = K.sight * (.3 + g[G_SIGHT]);
+  a.coolMax = K.cool / (.5 + g[G_METAB]);                               // hoher Stoffwechsel: schnellere, gründlichere Verdauung …
+  a.digest = (.55 + .4 * g[G_METAB]) * Math.pow(Math.min(1, m), 1.5);         // kleine Tiere verwerten einen Bissen schlechter
+  a.maxAge = K.maxAge * (1.35 - .7 * g[G_METAB]) * (.9 + .2 * rf());    // … aber kürzeres Leben
+  a.prefT = 4 + 36 * g[G_TEMP];
+  a.eCap = K.eCap * m; a.thr = a.eCap * (.65 + .3 * g[G_RTHR]);
+  a.nOff = 1 + Math.round(g[G_NOFF] * K.maxOff);
+  a.bodyE = K.bodyE * m; a.bodyN = K.bodyN * m;
+  a.herb = 1 - g[G_DIET]; a.carn = g[G_DIET];
+  a.col = geneColor(a.kind, g);
+}
+function newAgent(kind, x, y, g, sp, gen) {
+  const a = { id: nextAgentId++, kind, x, y, vx: 0, vy: 0, g, species: sp, gen, age: 0, energy: 0, nstore: 0, cool: 0, think: ri() & 7,
+    dir: (ri() & 1) ? 1 : -1, ld: ri() & 7, alive: true, gasp: 0, chase: 0, egg: 0, toughT: 0 };
+  derive(a); a.energy = a.thr * (.5 + .4 * rf()); a.nstore = a.bodyN * 1.5;
+  species[sp].count++; if (species[sp].count > species[sp].peak) species[sp].peak = species[sp].count;
+  if (species[sp].ext >= 0) species[sp].ext = -1;
+  return a;
+}
+function geneDist(a, b) { let s = 0; for (let k = 0; k < NG; k++) { const d = a[k] - b[k]; s += d * d; } return Math.sqrt(s); }
+function speciesName(kind, g, n) {
+  const tr = [[G_SIZE, 'magna', 'parva'], [G_SPEED, 'velox', 'lenta'], [G_TEMP, 'calida', 'frigida'], [G_SALT, 'salina', 'dulcis'], [G_DIET, 'vorax', 'mitis'], [G_SIGHT, 'vigil', 'caeca']];
+  const base = KINDS[kind].genes; let best = null, bd = .16;
+  for (const t of tr) { const d = g[t[0]] - base[t[0]]; if (Math.abs(d) > bd) { bd = Math.abs(d); best = d > 0 ? t[1] : t[2]; } }
+  if (!best) { const cols = ['rubra', 'aurantia', 'aurea', 'viridis', 'cyanea', 'caerulea', 'violacea', 'rosea'];
+    best = cols[(((geneHue(kind, g) % 360) + 360) % 360 / 45) | 0]; }
+  return KINDS[kind].genus + ' ' + best + '-' + n;
+}
+function newSpecies(kind, g, parent) {
+  const id = species.length;
+  species.push({ id, kind, name: speciesName(kind, g, id + 1), parent, founder: Array.from(g), born: tick, ext: -1, count: 0, peak: 0,
+    col: geneColor(kind, g), h0: hist.t.length, hist: [] });
+  return id;
+}
+function baseSpecies(kind, g) {                            // Art für vom Spieler ausgesetzte Tiere finden/anlegen
+  for (const s of species) if (s && s.kind === kind && geneDist(s.founder, g) < .06) return s.id;
+  return newSpecies(kind, g, -1);
+}
+function spawn(kind, x, y, over) {
+  const g = new Float32Array(KINDS[kind].genes);
+  if (over) for (const k in over) g[k] = over[k];
+  const sp = baseSpecies(kind, g);
+  for (let k = 0; k < NG; k++) g[k] = clamp(g[k] + gauss() * .015, 0, 1);
+  const a = newAgent(kind, x + .5, y + .5, g, sp, 1); a.age = (rf() * .5 * a.maxAge) | 0; agents.push(a); return a;
+}
+function spDec(id) { const s = species[id]; if (!s) return; if (--s.count <= 0) { s.count = 0; s.ext = tick; } }
+function kill(a, i) {                                      // Tod → Detritus (Nährstoffe + Kohlenstoff bleiben im Kreislauf)
+  a.alive = false; spDec(a.species);
+  const n = a.nstore, c = (Math.max(0, a.energy) + a.bodyE) * CE;
+  if (isWater[type[i]]) { rnd[i] = wetBits(type[i]) | (ri() & 63); type[i] = DETRITUS; life[i] = Math.min(65535, n * 1000); age[i] = Math.min(65535, c * 1000); }
+  else { nut[i] += n; co2[i] += c; }
+}
+function eatAlga(a, j, i) {
+  const n = (1000 + life[j]) * .001, eff = a.herb * a.digest;
+  a.energy += n * E_ALGA * eff; a.nstore += n; respire(i, n * GAS_K * (1 - eff));
+  setCell(j, type[i]); a.cool = a.coolMax;
+}
+// Leicht fressbar für Schwimmer sind nur junge, frei schwebende Algenzellen. Ausgewachsene Zellen sind zäh (Biss
+// gelingt selten), Algenfilm auf Oberflächen fressen nur Schnecken – so bleibt immer ein produktiver Bestand erhalten.
+function edible(j) { return type[j] === ALGAE && age[j] < ALG_YOUNG && !onSurf(j); }
+function seekAlgae(a, i, xi, yi) {                         // lose Alge fressen oder eine in Sichtweite ansteuern
+  let tough = -1;
+  for (let k = 0; k < 8; k++) { const j = i + NB8[k];
+    if (type[j] === ALGAE && !onSurf(j)) { if (age[j] < ALG_YOUNG) { eatAlga(a, j, i); a.vx = a.vy = 0; return true; } tough = j; } }
+  if (tough >= 0 && a.age >= a.toughT) {                    // zähe Altzelle: nur gelegentlich erfolgreich
+    a.toughT = a.age + a.coolMax;
+    if (rf() < .3) { eatAlga(a, tough, i); a.vx = a.vy = 0; return true; }
+  }
+  const r = a.sight; let bd = 1e9, bx = 0, by = 0;
+  for (let s = 0; s < 8; s++) {
+    const dx = ((rf() * 2 - 1) * r) | 0, dy = ((rf() * 2 - 1) * r) | 0, x = xi + dx, y = yi + dy;
+    if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) continue;
+    if (edible(y * W + x)) { const d = dx * dx + dy * dy; if (d < bd) { bd = d; bx = dx; by = dy; } }
+  }
+  if (bd < 1e9) { const d = Math.sqrt(bd) || 1; a.vx = bx / d * a.speed; a.vy = by / d * a.speed; return true; }
+  return false;
+}
+function hunt(a) {                                         // Beute: deutlich kleinere Tiere anderer Arten
+  let best = null, bd = a.sight * a.sight; const lim = a.mass * .6;
+  for (let q = 0; q < agents.length; q++) {
+    const b = agents[q]; if (!b.alive || b.egg || b.mass >= lim || b.species === a.species) continue;
+    const dx = b.x - a.x, dy = b.y - a.y, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = b; }
+  }
+  if (!best) return false;
+  const d = Math.sqrt(bd) || 1;
+  if (d <= 1.2 + a.m) {
+    const bi = (best.y | 0) * W + (best.x | 0);
+    let p = .8 - .4 * best.g[G_SPEED] + .3 * (a.g[G_SPEED] - .5) - .5 * (best.m - 1);   // große, schnelle Beute entkommt eher
+    for (let k = 0; k < 4; k++) { const t = type[bi + NB4[k]]; if (t === PLANT || t === ALGAE) { p -= .55; break; } }   // Versteck
+    if (best.kind === 2) p -= .45;                         // Schneckenhaus
+    if (rf() < (p < .04 ? .04 : p)) {
+      const et = Math.max(0, best.energy) + best.bodyE, gain = et * a.carn * a.digest, i = (a.y | 0) * W + (a.x | 0);
+      a.energy += gain; a.nstore += best.nstore; respire(i, (et - gain) * CE);
+      best.alive = false; spDec(best.species); a.cool = a.coolMax;
+    } else a.cool = 20;
+    return true;
+  }
+  a.vx = (best.x - a.x) / d * a.speed; a.vy = (best.y - a.y) / d * a.speed; return true;
+}
+function behaveDaphnia(a, i, xi, yi) {
+  if (--a.think <= 0) {
+    a.think = 6 + (ri() & 7);
+    let found = false;
+    if (a.cool <= 0 && a.energy < a.eCap) {
+      if (a.carn > .5 && hunt(a)) found = true;
+      else if (a.herb > .15 && seekAlgae(a, i, xi, yi)) found = true;
+    }
+    if (!found) { const an = rf() * 6.2832; a.vx = Math.cos(an) * a.speed * .7; a.vy = a.gasp ? -a.speed : Math.sin(an) * a.speed * .6; }
+  }
+  if (a.vx === 0 && a.vy === 0) return 0;
+  const nx = a.x + a.vx, ny = a.y + a.vy;
+  if (isWater[type[(ny | 0) * W + (nx | 0)]]) { a.x = nx; a.y = ny; } else a.think = 0;
+  return a.moveC;
+}
+function behaveFish(a, i, xi, yi) {
+  if (--a.think <= 0) {
+    a.think = 4; a.chase = 0;
+    if (a.gasp) { a.vx = a.dir * a.speed * .3; a.vy = -a.speed * .6; }             // schnappt an der Oberfläche nach Luft
+    else if (a.cool <= 0 && a.energy < a.eCap * .92 && ((a.carn > .3 && hunt(a)) || (a.herb > .3 && seekAlgae(a, i, xi, yi)))) a.chase = 1;
+    else {
+      if (ri() % 60 === 0) a.dir = -a.dir;
+      a.vx = a.dir * a.speed * .4; a.vy = clamp(a.vy + (rf() - .5) * .12 * a.speed, -.2 * a.speed, .2 * a.speed);
+    }
+  }
+  const nx = a.x + a.vx, ny = a.y + a.vy;
+  if (isWater[type[(ny | 0) * W + (nx | 0)]]) { a.x = nx; a.y = ny; }
+  else if (isWater[type[yi * W + (nx | 0)]]) { a.x = nx; a.vy = -a.vy * .5; }
+  else { a.dir = -a.dir; a.vx = -a.vx; a.vy = (rf() - .5) * a.speed * .5; }
+  if (a.vx > .01) a.dir = 1; else if (a.vx < -.01) a.dir = -1;
+  return a.moveC * (a.chase ? 1 : .3);
+}
+function onSurf(j) { return solidish[type[j + W]] || solidish[type[j - 1]] || solidish[type[j + 1]] || solidish[type[j - W]]; }
+function behaveSnail(a, i, xi, yi) {
+  if (--a.think > 0) return 0;
+  if (!onSurf(i)) { a.think = 3; if (isWater[type[i + W]]) a.y += 1; return 0; }    // sinkt, bis sie Halt findet
+  a.think = (22 / (.5 + a.g[G_SPEED])) | 0;
+  let tx = -1, ty = 0;
+  if (a.cool <= 0 && a.energy < a.eCap * .95) {
+    for (let k = 0; k < 8; k++) { const j = i + NB8[k]; if (type[j] === ALGAE) { eatAlga(a, j, i); return 0; } }
+    for (let k = 0; k < 8; k++) { const j = i + NB8[k], tj = type[j]; if (tj === DETRITUS || tj === BACT) {   // Schnecken fressen auch Detritus
+      const c = age[j] * .001, gain = c / CE * .55 * a.herb * a.digest; a.energy += gain; a.nstore += life[j] * .001; respire(i, c - gain * CE);
+      setCell(j, type[i]); a.cool = a.coolMax; return 0; } }
+    const r = a.sight;
+    for (let s = 0; s < 6; s++) {
+      const x = xi + (((rf() * 2 - 1) * r) | 0), y = yi + (((rf() * 2 - 1) * r) | 0);
+      if (x > 0 && y > 0 && x < W - 1 && y < H - 1 && type[y * W + x] === ALGAE) { tx = x; ty = y; break; }
+    }
+  }
+  let best = -1, bs = 1e9;
+  for (let k = 0; k < 8; k++) {
+    const j = i + NB8[k]; if (!isWater[type[j]] || !onSurf(j)) continue;
+    let sc;
+    if (tx >= 0) { const dx = xi + DX8[k] - tx, dy = yi + DY8[k] - ty; sc = dx * dx + dy * dy + rf(); }
+    else sc = (k === a.ld ? 0 : k === ((a.ld + 4) & 7) ? 3 : 1.5) + rf() * 2;
+    if (sc < bs) { bs = sc; best = k; }
+  }
+  if (best < 0) return 0;
+  a.x = xi + DX8[best] + .5; a.y = yi + DY8[best] + .5; a.ld = best; if (DX8[best]) a.dir = DX8[best];
+  return a.moveC * a.think;
+}
+function mutate(pg) {
+  const g = new Float32Array(pg), mr = settings.mut;
+  for (let k = 0; k < NG; k++) {
+    let v = g[k] + gauss() * .025 * mr;
+    if (rf() < .01 * mr) v += (rf() - .5) * .3;            // seltene große Mutation
+    g[k] = clamp(v, 0, 1);
+  }
+  return g;
+}
+function tryRepro(a) {
+  const K = KINDS[a.kind];
+  if (a.energy < a.thr || a.age < K.matur || agents.length + newborn.length >= MAXA) return;
+  if (a.kind === 1) {                                      // Fische brauchen ein freies Revier
+    let c = 0; for (const b of agents) if (b.kind === 1 && b.alive && b !== a) { const dx = b.x - a.x, dy = b.y - a.y; if (dx * dx + dy * dy < 576) c++; }
+    if (c >= 3) return;
+  }
+  const dens = kindN[a.kind] / (counts.water * CROWD[a.kind] + 1);   // Dichtestress bremst die Vermehrung (logistisch)
+  if (rf() < dens * dens) return;
+  // Brutbudget wird auf die Nachkommen verteilt; jeder braucht eine Mindestausstattung (Körper + Startreserve)
+  // (Eltern behalten immer eine Reserve von 35 % ihrer Kapazität, Nachkommen starten mit mindestens 20 %)
+  const budget = a.thr - a.eCap * .35, n0 = Math.min(a.nOff, Math.floor(budget / (a.bodyE + a.eCap * .2)));
+  if (n0 < 1) return;
+  let n = n0; const per = budget / n;
+  n = Math.min(n, Math.floor((a.nstore - a.bodyN) / a.bodyN + 1e-6)); if (n < 1) return;
+  for (let k = 0; k < n; k++) {
+    const g = mutate(a.g);
+    // Artbildung: zu große genetische Distanz zum Gründer-Genom → neue (oder nähere bestehende) Art
+    let sp = a.species;
+    if (geneDist(g, species[sp].founder) > SPEC_THR) {
+      let bd = SPEC_THR * .6, bs = -1;
+      for (const s of species) if (s && s.kind === a.kind && s.count > 0) { const d = geneDist(g, s.founder); if (d < bd) { bd = d; bs = s.id; } }
+      sp = bs >= 0 ? bs : newSpecies(a.kind, g, sp);
+    }
+    const c = newAgent(a.kind, a.x, a.y, g, sp, a.gen + 1);
+    c.energy = Math.max(2, per - c.bodyE); c.nstore = c.bodyN;
+    if (a.kind === 0 && rf() < .12) { c.egg = 1; c.vx = c.vy = 0; }       // Dauerei: ruht, bis die Population eingebrochen ist
+    a.nstore -= c.bodyN; a.energy -= per; newborn.push(c);
+  }
+}
+function stepEgg(a) {                                        // Dauereier sinken ab, verbrauchen nichts und schlüpfen bei geringer Dichte
+  a.age++;
+  const i = (a.y | 0) * W + (a.x | 0);
+  if ((a.age & 3) === 0 && isWater[type[i + W]]) a.y += 1;
+  if (a.age > 20000 || temp[i] > 60) { a.alive = false; spDec(a.species); nut[i] += a.nstore; co2[i] += (a.energy + a.bodyE) * CE; return; }
+  if (a.age > 600 && isWater[type[i]] && kindN[0] < counts.water * CROWD[0] * .5 && rf() < .0008) { a.egg = 0; a.age = 0; a.think = 1; }
+}
+function stepAgent(a) {
+  const K = KINDS[a.kind];
+  if (a.egg) { stepEgg(a); return; }
+  a.age++;
+  const xi = clamp(a.x | 0, 1, W - 2), yi = clamp(a.y | 0, 1, H - 2), i = yi * W + xi, t = type[i];
+  if (!isWater[t]) {                                       // gestrandet oder verschüttet
+    if (tPass[type[i + W]]) a.y += 1; else if (tPass[t] === 0 && tPass[type[i - W]]) a.y -= 1;
+    a.energy -= K.basal * 12; if (a.energy <= 0) kill(a, i); return;
+  }
+  const T = temp[i];
+  if (T > 46 || T < -3) { kill(a, i); return; }
+  let cost = a.basal;
+  const dT = Math.abs(T - a.prefT) - 3;
+  if (dT > 0) cost += K.basal * .09 * dT / a.m;            // Temperaturstress – große Körper puffern besser
+  const s = a.g[G_SALT];
+  cost += K.basal * (t === SALTWATER ? 2.5 * (1 - s) * (1 - s) : .6 * s * s);
+  if (o2[i] < .08) { cost += K.basal * 5; a.gasp = 1; } else a.gasp = 0;   // Sauerstoffmangel
+  if (a.cool > 0) a.cool--;
+  cost += a.kind === 0 ? behaveDaphnia(a, i, xi, yi) : a.kind === 1 ? behaveFish(a, i, xi, yi) : behaveSnail(a, i, xi, yi);
+  a.energy -= cost; respire(i, cost * CE);
+  if (a.energy <= 0 || a.age > a.maxAge) { kill(a, (a.y | 0) * W + (a.x | 0)); return; }
+  const capN = a.bodyN * (1 + a.nOff) + .05;               // überschüssige Nährstoffe ausscheiden
+  if (a.nstore > capN) { const d = Math.min(a.nstore - capN, .02); a.nstore -= d; nut[i] += d; }
+  if ((a.age & 15) === 0) tryRepro(a);
+}
+function stepAgents() {
+  const n = agents.length;
+  kindN[0] = kindN[1] = kindN[2] = 0;
+  for (let q = 0; q < n; q++) if (!agents[q].egg) kindN[agents[q].kind]++;
+  for (let q = 0; q < n; q++) { const a = agents[q]; if (a.alive) stepAgent(a); }
+  let w = 0; for (let q = 0; q < n; q++) if (agents[q].alive) agents[w++] = agents[q];
+  agents.length = w;
+  for (const b of newborn) agents.push(b); newborn.length = 0;
+}
+
+// ===== 6. Simulationsschleife & Statistik ============================
+const HMAX = 720;
+let hist, sampleEvery = 60;
+const counts = { algae: 0, plant: 0, bact: 0, detr: 0, water: 0, kind: [0, 0, 0], o2: 0, co2: 0 };
+function resetHist() {
+  hist = { t: [], algae: [], plant: [], bact: [], detr: [], k0: [], k1: [], k2: [], o2: [], co2: [], gene: [] };
+  for (let k = 0; k < 3 * NG; k++) hist.gene.push([]);
+  sampleEvery = 60;
+}
+function sample() {
+  let cA = 0, cP = 0, cB = 0, cD = 0, cW = 0, so = 0, sc = 0;
+  for (let i = 0; i < N; i++) {
+    const t = type[i]; if (t === ALGAE) cA++; else if (t === PLANT) cP++; else if (t === BACT) cB++; else if (t === DETRITUS) cD++; else if (isWater[t]) cW++;
+    if (tPerm[t] !== 0) { so += o2[i]; sc += co2[i]; }
+  }
+  const kc = [0, 0, 0], gs = new Float64Array(3 * NG);
+  for (const a of agents) { if (a.egg) continue; kc[a.kind]++; const o = a.kind * NG; for (let k = 0; k < NG; k++) gs[o + k] += a.g[k]; }
+  counts.water = cW + cA; counts.algae = cA; counts.plant = cP; counts.bact = cB; counts.detr = cD; counts.kind = kc; counts.o2 = so; counts.co2 = sc;
+  hist.t.push(tick); hist.algae.push(cA); hist.plant.push(cP); hist.bact.push(cB); hist.detr.push(cD);
+  hist.k0.push(kc[0]); hist.k1.push(kc[1]); hist.k2.push(kc[2]); hist.o2.push(Math.round(so)); hist.co2.push(Math.round(sc));
+  for (let k = 0; k < 3 * NG; k++) { const c = kc[(k / NG) | 0]; hist.gene[k].push(c ? Math.round(gs[k] / c * 1000) / 1000 : null); }
+  for (const s of species) if (s && s.count > 0) { while (s.h0 + s.hist.length < hist.t.length - 1) s.hist.push(0); s.hist.push(s.count); }
+  if (hist.t.length >= HMAX) {                             // Verlauf halbieren, Abtastintervall verdoppeln
+    const dec = a => a.filter((_, k) => k & 1);
+    for (const k in hist) hist[k] = k === 'gene' ? hist.gene.map(dec) : dec(hist[k]);
+    for (const s of species) if (s) { s.hist = s.hist.filter((_, k) => (s.h0 + k) & 1); s.h0 = s.h0 >> 1; }
+    sampleEvery *= 2;
+  }
+  if (species.length > 500) pruneSpecies();
+  statsDirty = true;
+}
+function pruneSpecies() {                                  // ausgestorbene Eintagsfliegen entfernen (IDs bleiben stabil)
+  for (const s of species) if (s && s.count === 0 && s.peak < 3 && s.ext >= 0) {
+    for (const c of species) if (c && c.parent === s.id) c.parent = s.parent;
+    species[s.id] = null;
+  }
+}
+function step() {
+  tick++; cur = tick & 255;
+  stepCells(); stepHeat(); stepGas();
+  stepNut();
+  if (tick % 6 === 0) stepLight();
+  stepAgents();
+  if (counts.algae < 40 && (tick & 3) === 0) {             // Algensporen: verhindert endgültiges Aussterben der Algen
+    const i = ri() % N; if (isWater[type[i]] && light[i] > 60 && nut[i] > .01 && rf() < .1) setCell(i, ALGAE);
+  }
+  if (tick % sampleEvery === 0) sample();
+}
+
+// ===== 7. Rendering ==================================================
+const cv = $('view'), ctx = cv.getContext('2d');
+let img, px, pal, overlay = 0;
+const BG = 0xff140f0b;
+const pack = (r, g, b) => (255 << 24) | (clamp(b | 0, 0, 255) << 16) | (clamp(g | 0, 0, 255) << 8) | clamp(r | 0, 0, 255);
+function buildPalette() {                                  // 16 Helligkeitsstufen × Element × 8 Farbvarianten
+  pal = new Uint32Array(16 * NT * 8);
+  for (let s = 0; s < 16; s++) for (const d of DEF) for (let v = 0; v < 8; v++) {
+    const f = d.id === VOID || d.emis ? 1 : d.trans === 0 ? .62 + .38 * s / 15 : .36 + .64 * s / 15, o = (v - 3.5) / 3.5 * d.v;
+    pal[(s * NT + d.id) * 8 + v] = pack((d.col[0] + o) * f, (d.col[1] + o) * f, (d.col[2] + o * .8) * f);
+  }
+}
+function lut(stops) {                                      // Farbverlauf aus Stützstellen [index, r, g, b]
+  const L = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let k = 0; while (k < stops.length - 2 && stops[k + 1][0] < i) k++;
+    const a = stops[k], b = stops[k + 1], f = clamp((i - a[0]) / (b[0] - a[0]), 0, 1);
+    L[i] = pack(a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f);
+  }
+  return L;
+}
+const heatLUT = lut([[0, 30, 40, 170], [24, 60, 140, 230], [50, 24, 40, 46], [96, 190, 130, 30], [144, 225, 50, 30], [200, 255, 130, 30], [255, 255, 245, 200]]);
+const lightLUT = lut([[0, 8, 8, 14], [128, 130, 120, 70], [255, 255, 245, 190]]);
+const oxyLUT = lut([[0, 60, 8, 14], [50, 150, 40, 60], [128, 60, 80, 170], [200, 70, 200, 230], [255, 220, 255, 255]]);
+function shadeCol(c, f) { return (255 << 24) | (((c >> 16 & 255) * f) << 16) | (((c >> 8 & 255) * f) << 8) | ((c & 255) * f); }
+function plot(x, y, c) { if (x > 0 && y > 0 && x < W - 1 && y < H - 1) { const i = y * W + x; if (type[i] !== VOID && !solidish[type[i]]) px[i] = c; } }
+function render() {
+  const ov = overlay;
+  if (ov === 0) for (let i = 0; i < N; i++) px[i] = pal[((light[i] >> 4) * NT + type[i]) * 8 + (rnd[i] & 7)];
+  else if (ov === 4) for (let i = 0; i < N; i++) px[i] = pal[(2 * NT + type[i]) * 8 + (rnd[i] & 7)];
+  else if (ov === 1) for (let i = 0; i < N; i++) {
+    if (type[i] === VOID) { px[i] = BG; continue; }
+    const T = temp[i], v = T < 100 ? (T + 20) * 1.2 : 144 + (T - 100) * .08; px[i] = heatLUT[v < 0 ? 0 : v > 255 ? 255 : v | 0];
+  }
+  else if (ov === 2) for (let i = 0; i < N; i++) { const t = type[i]; px[i] = t === VOID ? BG : tTrans[t] === 0 ? shadeCol(lightLUT[light[i]], .45) : lightLUT[light[i]]; }
+  else for (let i = 0; i < N; i++) { const t = type[i]; if (tPerm[t] === 0) px[i] = t === VOID ? BG : 0xff2a2623; else { const v = o2[i] * 170; px[i] = oxyLUT[v > 255 ? 255 : v | 0]; } }
+  // Tiere
+  for (const a of agents) {
+    const x = a.x | 0, y = a.y | 0;
+    let c = ov === 4 ? species[a.species].col : a.col;
+    if (ov === 0) c = shadeCol(c, .5 + .5 * light[clamp(y, 0, H - 1) * W + clamp(x, 0, W - 1)] / 255);
+    if (a.egg) { if (ov !== 4) plot(x, y, shadeCol(c, .45)); }
+    else if (a.kind === 0) plot(x, y, c);
+    else if (a.kind === 1) {                               // Fisch: Körper + Schwanz + Auge, Größe aus dem Größen-Gen
+      const len = a.m < .8 ? 2 : a.m < 1.25 ? 3 : 4, h = a.m < .8 ? 1 : a.m < 1.25 ? 2 : 3, d = a.dir, dk = shadeCol(c, .6);
+      for (let bx = 0; bx < len; bx++) for (let by = 0; by < h; by++) plot(x - d * bx, y + by - (h >> 1), by === h - 1 && h > 1 ? shadeCol(c, .82) : c);
+      plot(x - d * len, y, dk); if (h > 1) plot(x - d * len, y - 1 + (h > 2 ? 0 : 0), dk);
+      plot(x, y - (h >> 1), 0xff101010);
+    } else { plot(x, y, c); if (a.m > 1) plot(x - a.dir, y, shadeCol(c, .7)); }
+  }
+  if (selAgent && selAgent.alive && (performance.now() & 256)) {
+    const x = selAgent.x | 0, y = selAgent.y | 0, c = 0xffffffff;
+    for (const [dx, dy] of [[-3, -3], [3, -3], [-3, 3], [3, 3], [-3, -2], [-2, -3], [3, -2], [2, -3], [-3, 2], [-2, 3], [3, 2], [2, 3]]) {
+      const X = x + dx, Y = y + dy; if (X > 0 && Y > 0 && X < W - 1 && Y < H - 1) px[Y * W + X] = c; }
+  }
+  if (hoverX >= 0 && tool !== 'inspect') {                 // Pinselumriss
+    forBrush(hoverX, hoverY, (x, y, edge) => { if (edge) { const i = y * W + x, p = px[i];
+      px[i] = (255 << 24) | (((p >> 16 & 255) * .6 + 100) << 16) | (((p >> 8 & 255) * .6 + 100) << 8) | ((p & 255) * .6 + 100); } });
+  }
+  ctx.putImageData(img, 0, 0);
+}
+function setupCanvas() {
+  cv.width = W; cv.height = H; img = ctx.createImageData(W, H); px = new Uint32Array(img.data.buffer); fit();
+}
+function fit() {
+  const st = $('stage'), s = Math.max(1, Math.min((st.clientWidth - 16) / W, (st.clientHeight - 16) / H));
+  cv.style.width = Math.floor(W * s) + 'px'; cv.style.height = Math.floor(H * s) + 'px';
+}
+
+// ===== 8. UI =========================================================
+const TOOLS = {
+  heat: { name: 'Wärme', col: '#ff7a3c' }, cold: { name: 'Kälte', col: '#7cc8ff' }, erase: { name: 'Radierer', col: '#555e6b' },
+  inspect: { name: 'Inspektor', col: '#e8eef5' }, daphnia: { name: 'Daphnie', kind: 0 }, fish: { name: 'Fisch', kind: 1 }, snail: { name: 'Schnecke', kind: 2 } };
+const TABS = [
+  ['Feststoffe', ['GLASS', 'STONE', 'WOOD', 'METAL', 'ICE']],
+  ['Pulver', ['SAND', 'SOIL', 'GRAVEL', 'SALT', 'ASH']],
+  ['Flüssigkeiten', ['WATER', 'SALTWATER', 'OIL', 'LAVA']],
+  ['Gase', ['STEAM', 'SMOKE', 'O2', 'CO2']],
+  ['Energie', ['FIRE', 'heat', 'cold', 'LAMP', 'HEATER', 'COOLER']],
+  ['Leben', ['ALGAE', 'PLANT', 'BACT', 'DETRITUS', 'daphnia', 'fish', 'snail']],
+  ['Werkzeuge', ['erase', 'inspect']]];
+let tool = 'SAND', prevTool = 'SAND', tab = 1, brush = 5, round = true, paused = false, speed = 1;
+let hoverX = -1, hoverY = -1, down = 0, lastX = 0, lastY = 0, spawnAcc = 0, statsDirty = true;
+
+function buildToolbar() {
+  const tb = $('tabs'); tb.innerHTML = '';
+  TABS.forEach((t, k) => { const b = document.createElement('button'); b.className = 'tab' + (k === tab ? ' on' : ''); b.textContent = t[0];
+    b.onclick = () => { tab = k; buildToolbar(); }; tb.appendChild(b); });
+  const bb = document.createElement('div'); bb.id = 'brushbox';
+  bb.innerHTML = 'Pinsel <input type="range" id="rBrush" min="1" max="40" value="' + brush + '" style="width:110px"><span id="oBrush" style="min-width:20px">' + brush +
+    '</span><button id="bShape" title="Pinselform">' + (round ? '● rund' : '■ eckig') + '</button>';
+  tb.appendChild(bb);
+  $('rBrush').oninput = e => { brush = +e.target.value; $('oBrush').textContent = brush; };
+  $('bShape').onclick = () => { round = !round; buildToolbar(); };
+  const eb = $('elems'); eb.innerHTML = '';
+  TABS[tab][1].forEach((key, k) => {
+    const b = document.createElement('button'); b.className = 'elem' + (key === tool ? ' on' : '');
+    let name, col;
+    if (TOOLS[key]) { name = TOOLS[key].name; col = TOOLS[key].col || cssCol(geneColor(TOOLS[key].kind, KINDS[TOOLS[key].kind].genes)); }
+    else { const d = DEF[E[key]]; name = d.name; col = 'rgb(' + d.col + ')'; }
+    b.innerHTML = '<i style="background:' + col + '"></i>' + name + ' <small>' + (k + 1) + '</small>';
+    b.onclick = () => selectTool(key); eb.appendChild(b);
+  });
+}
+function selectTool(key) { tool = key; if (key !== 'inspect') prevTool = key; else showSection('secInsp', true); buildToolbar(); }
+function showSection(id, on) {
+  const s = $(id); if (on === undefined) on = s.classList.contains('closed'); s.classList.toggle('closed', !on);
+  $('bInsp').classList.toggle('on', !$('secInsp').classList.contains('closed'));
+  $('bStats').classList.toggle('on', !$('secStats').classList.contains('closed'));
+  $('side').style.display = ($('secInsp').classList.contains('closed') && $('secStats').classList.contains('closed')) ? 'none' : '';
+  fit(); statsDirty = true;
+}
+function toggleInspector() {
+  const on = $('secInsp').classList.contains('closed');
+  showSection('secInsp', on);
+  if (on) { tool = 'inspect'; } else if (tool === 'inspect') tool = prevTool;
+  buildToolbar();
+}
+
+// --- Zeichnen ---
+function forBrush(gx, gy, fn) {
+  const s = brush, r2 = s * s / 4, o = (s - 1) / 2;
+  for (let dy = 0; dy < s; dy++) for (let dx = 0; dx < s; dx++) {
+    const ox = dx - o, oy = dy - o;
+    if (round && ox * ox + oy * oy > r2) continue;
+    const x = Math.floor(gx + ox + .5), y = Math.floor(gy + oy + .5);
+    if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) continue;
+    let edge = dx === 0 || dy === 0 || dx === s - 1 || dy === s - 1;
+    if (round && !edge) { const d = Math.abs(ox) + 1, e = Math.abs(oy) + 1; edge = d * d + oy * oy > r2 || ox * ox + e * e > r2; }
+    fn(x, y, edge);
+  }
+}
+function paintAt(gx, gy, erase) {
+  const key = erase ? 'erase' : tool;
+  if (key === 'inspect') return;
+  const T = TOOLS[key];
+  if (T && T.kind !== undefined) {                          // Tiere aussetzen (gedrosselt)
+    if (spawnAcc > 0) return; spawnAcc = T.kind === 0 ? 2 : 8;
+    const n = T.kind === 0 ? Math.max(1, brush >> 1) : 1;
+    for (let k = 0; k < n; k++) {
+      const x = clamp(Math.round(gx + (rf() - .5) * brush), 1, W - 2), y = clamp(Math.round(gy + (rf() - .5) * brush), 1, H - 2), t = type[y * W + x];
+      if (isWater[t] && agents.length < MAXA) spawn(T.kind, x, y, t === SALTWATER ? { [G_SALT]: .85 } : null);
+    }
+    return;
+  }
+  const id = T ? -1 : E[key], d = T ? null : DEF[id];
+  forBrush(gx, gy, (x, y) => {
+    const i = y * W + x, t = type[i]; if (t === VOID) return;
+    if (key === 'erase') { if (t !== EMPTY) setCell(i, EMPTY); }
+    else if (key === 'heat') temp[i] = Math.min(2000, temp[i] + 40);
+    else if (key === 'cold') temp[i] = Math.max(-60, temp[i] - 25);
+    else {
+      if (t === id) return;
+      const st = tState[t];
+      const ok = t === EMPTY || st === ST.GAS || st === ST.ENERGY || (st === ST.LIQUID && d.st !== ST.GAS && d.st !== ST.ENERGY);
+      if (!ok || (d.sparse && rf() > .3)) return;
+      place(i, id);
+    }
+  });
+  if (key === 'erase') { const r2 = brush * brush / 4 + 1;
+    for (const a of agents) { const dx = a.x - gx - .5, dy = a.y - gy - .5; if (a.alive && dx * dx + dy * dy <= r2) { a.alive = false; spDec(a.species); } }
+    agents = agents.filter(a => a.alive); }
+}
+function gridPos(e) { const r = cv.getBoundingClientRect(); return [Math.floor((e.clientX - r.left) / r.width * W), Math.floor((e.clientY - r.top) / r.height * H)]; }
+function strokeTo(x, y, erase) {
+  const dx = x - lastX, dy = y - lastY, n = Math.max(Math.abs(dx), Math.abs(dy), 1), stp = Math.max(1, brush >> 2);
+  for (let k = stp; k <= n; k += stp) paintAt(Math.round(lastX + dx * k / n), Math.round(lastY + dy * k / n), erase);
+  if (n % stp) paintAt(x, y, erase);
+  lastX = x; lastY = y;
+}
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault(); cv.setPointerCapture(e.pointerId);
+  const [x, y] = gridPos(e); hoverX = x; hoverY = y; lastX = x; lastY = y;
+  if (tool === 'inspect' && e.button !== 2) { pickAgent(x, y); return; }
+  down = e.button === 2 ? 2 : 1; spawnAcc = 0; paintAt(x, y, down === 2);
+});
+cv.addEventListener('pointermove', e => { const [x, y] = gridPos(e); hoverX = x; hoverY = y; if (down) strokeTo(x, y, down === 2); });
+addEventListener('pointerup', () => { down = 0; });
+cv.addEventListener('pointerleave', () => { if (!down) hoverX = -1; });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('wheel', e => { e.preventDefault(); brush = clamp(brush + (e.deltaY < 0 ? 1 : -1), 1, 40); const r = $('rBrush'); if (r) { r.value = brush; $('oBrush').textContent = brush; } }, { passive: false });
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.ctrlKey || e.metaKey) return;
+  if (e.code === 'Space') { e.preventDefault(); setPaused(!paused); }
+  else if (e.key >= '1' && e.key <= '9') { const k = TABS[tab][1][+e.key - 1]; if (k) selectTool(k); }
+  else if (e.key === 'i' || e.key === 'I') toggleInspector();
+  else if (e.key === 's' || e.key === 'S') showSection('secStats');
+  else if (e.key === 'Escape') document.querySelectorAll('.modal').forEach(m => m.classList.add('hide'));
+});
+function setPaused(p) { paused = p; $('bPause').textContent = p ? '▶' : '⏸'; $('bPause').classList.toggle('on', p); }
+$('bPause').onclick = () => setPaused(!paused);
+$('bStep').onclick = () => { setPaused(true); step(); };
+$('sSpeed').onchange = e => speed = +e.target.value;
+$('sOverlay').onchange = e => overlay = +e.target.value;
+$('bInsp').onclick = toggleInspector;
+$('bStats').onclick = () => showSection('secStats');
+document.querySelectorAll('aside h2').forEach(h => h.onclick = () => { if (h.parentNode.id === 'secInsp') toggleInspector(); else showSection(h.parentNode.id); });
+const openModal = id => { $(id).classList.remove('hide'); };
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').classList.add('hide'));
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('pointerdown', e => { if (e.target === m) m.classList.add('hide'); }));
+$('bHelp').onclick = () => openModal('mHelp');
+$('bSet').onclick = () => { syncSettingsUI(); openModal('mSet'); };
+$('bWorld').onclick = () => { refreshSlots(); openModal('mWorld'); };
+$('bTree').onclick = () => { openModal('mTree'); drawTree(); };
+$('cTreeAll').onchange = drawTree;
+
+// --- Inspektor ---
+function pickAgent(x, y) {
+  let best = null, bd = 30;
+  for (const a of agents) { const dx = a.x - x - .5, dy = a.y - y - .5, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = a; } }
+  selAgent = best; buildCreature();
+}
+function buildCreature() {
+  const c = $('creature');
+  if (!selAgent) { c.innerHTML = '<p style="color:var(--dim);margin:8px 0 0">Inspektor-Werkzeug aktiv: Klick auf ein Lebewesen zeigt sein Genom.</p>'; return; }
+  let h = '<div class="cap"><span>Lebewesen</span></div><div class="kv" id="crKV"></div><div class="cap"><span>Genom</span></div>';
+  for (let k = 0; k < NG; k++) h += '<div class="gene"><span>' + GENES[k].n + '</span><div class="bar"><i id="gb' + k + '"></i></div><em id="gv' + k + '"></em></div>';
+  c.innerHTML = h; updateCreature();
+}
+function updateCreature() {
+  const a = selAgent; if (!a || !$('crKV')) return;
+  const s = species[a.species], K = KINDS[a.kind];
+  $('crKV').innerHTML = '<span>Art</span><span style="color:' + cssCol(s ? s.col : a.col) + '">' + (s ? s.name : '–') + '</span>' +
+    '<span>Typ</span><span>' + K.name + (a.egg ? ' (Dauerei)' : '') + (a.alive ? '' : ' (verstorben)') + '</span>' +
+    '<span>Generation</span><span>' + a.gen + '</span>' +
+    '<span>Alter</span><span>' + (a.age / 60).toFixed(0) + ' s / ' + (a.maxAge / 60).toFixed(0) + ' s</span>' +
+    '<span>Energie</span><span>' + a.energy.toFixed(0) + ' / ' + a.eCap.toFixed(0) + '</span>' +
+    '<span>Nährstoffvorrat</span><span>' + a.nstore.toFixed(2) + '</span>';
+  for (let k = 0; k < NG; k++) { $('gb' + k).style.width = (a.g[k] * 100).toFixed(0) + '%'; $('gv' + k).textContent = GENES[k].f(a); }
+}
+function updateCellInfo() {
+  const ci = $('cellInfo');
+  if (hoverX < 0 || hoverX >= W || hoverY < 0 || hoverY >= H) { ci.innerHTML = '<span>Zelle</span><span>–</span>'; return; }
+  const i = hoverY * W + hoverX, t = type[i]; let nm = DEF[t].name;
+  for (const a of agents) if ((a.x | 0) === hoverX && (a.y | 0) === hoverY) { nm += ' · ' + KINDS[a.kind].name + (a.egg ? '-Dauerei' : ''); break; }
+  ci.innerHTML = '<span>Material</span><span>' + nm + '</span><span>Position</span><span>' + hoverX + ', ' + hoverY + '</span>' +
+    '<span>Temperatur</span><span>' + temp[i].toFixed(1) + ' °C</span><span>Licht</span><span>' + (light[i] / 2.55).toFixed(0) + ' %</span>' +
+    '<span>O₂</span><span>' + o2[i].toFixed(2) + '</span><span>CO₂</span><span>' + co2[i].toFixed(2) + '</span><span>Nährstoffe</span><span>' + nut[i].toFixed(3) + '</span>';
+}
+
+// --- Diagramme ---
+function drawChart(id, series, lo) {
+  const c = $(id), w = c.clientWidth, h = c.clientHeight; if (!w) return;
+  const dpr = devicePixelRatio || 1; c.width = w * dpr; c.height = h * dpr;
+  const g = c.getContext('2d'); g.scale(dpr, dpr);
+  let max = -1e9, min = lo === undefined ? 1e9 : lo;
+  for (const s of series) for (const v of s.d) if (v !== null) { if (v > max) max = v; if (v < min) min = v; }
+  if (max < -1e8) { max = 1; min = 0; } if (max - min < 1e-6) max = min + 1;
+  const n = Math.max(2, hist.t.length), x0 = 4, x1 = w - 4, y0 = 16, y1 = h - 4;
+  g.strokeStyle = '#1b2532'; g.lineWidth = 1; g.beginPath();
+  for (let k = 0; k <= 2; k++) { const y = y0 + (y1 - y0) * k / 2 + .5; g.moveTo(x0, y); g.lineTo(x1, y); } g.stroke();
+  g.lineWidth = 1.4; g.lineJoin = 'round';
+  for (const s of series) {
+    g.strokeStyle = s.c; g.beginPath(); let pen = false;
+    for (let k = 0; k < s.d.length; k++) {
+      const v = s.d[k]; if (v === null) { pen = false; continue; }
+      const x = x0 + ((s.off || 0) + k) / (n - 1) * (x1 - x0), y = y1 - (v * (s.mul || 1) - min) / (max - min) * (y1 - y0);
+      if (pen) g.lineTo(x, y); else { g.moveTo(x, y); pen = true; }
+    }
+    g.stroke();
+  }
+  g.font = '10px system-ui'; g.textBaseline = 'top'; let lx = 5;
+  for (const s of series) { g.fillStyle = s.c; g.fillText(s.l, lx, 3); lx += g.measureText(s.l).width + 8; if (lx > w - 40) break; }
+  g.fillStyle = '#5d6b7c'; g.textAlign = 'right';
+  g.fillText(max >= 100 ? max.toFixed(0) : max.toFixed(2), w - 4, y0 + 1); g.textBaseline = 'bottom'; g.fillText(min >= 100 ? min.toFixed(0) : min.toFixed(2), w - 4, y1);
+}
+function drawStats() {
+  if ($('secStats').classList.contains('closed')) return;
+  drawChart('ch1', [
+    { d: hist.algae.map(v => v / 10), c: '#4fc866', l: 'Algen/10' }, { d: hist.plant.map(v => v / 10), c: '#2a8f4a', l: 'Pflanzen/10' },
+    { d: hist.k0, c: '#e8d27a', l: 'Daphnien' }, { d: hist.k1, c: '#ff7d4d', l: 'Fische' }, { d: hist.k2, c: '#c58cff', l: 'Schnecken' },
+    { d: hist.detr.map((v, k) => (v + hist.bact[k]) / 10), c: '#8a7450', l: 'Detritus/10' }], 0);
+  const top = species.filter(s => s && s.count > 0).sort((a, b) => b.count - a.count).slice(0, 8);
+  drawChart('ch2', top.map(s => ({ d: s.hist, off: s.h0, c: cssCol(s.col), l: s.name.replace(/^(\w)\w+ /, '$1. ') })), 0);
+  drawChart('ch3', [{ d: hist.o2, c: '#6ecbff', l: 'O₂' }, { d: hist.co2, c: '#c9a0a0', l: 'CO₂' }]);
+  const gi = +$('sGene').value;
+  drawChart('ch4', [{ d: hist.gene[gi], c: '#e8d27a', l: 'Daphnien' }, { d: hist.gene[NG + gi], c: '#ff7d4d', l: 'Fische' }, { d: hist.gene[2 * NG + gi], c: '#c58cff', l: 'Schnecken' }]);
+}
+GENES.forEach((g, k) => { const o = document.createElement('option'); o.value = k; o.textContent = g.n; $('sGene').appendChild(o); });
+$('sGene').onchange = () => { statsDirty = true; };
+
+// --- Stammbaum ---
+function drawTree() {
+  const all = $('cTreeAll').checked;
+  const show = s => s && (all || s.count > 0 || s.peak >= 3);
+  const kids = new Map(), roots = [];
+  const anc = s => { let p = s.parent; while (p >= 0 && !show(species[p])) p = species[p] ? species[p].parent : -1; return p; };   // ausgeblendete Vorfahren überspringen
+  for (const s of species) if (show(s)) { const p = anc(s); s._p = p; if (p < 0) roots.push(s); else { if (!kids.has(p)) kids.set(p, []); kids.get(p).push(s); } }
+  const rows = []; const walk = (s, d) => { s._row = rows.length; rows.push([s, d]); for (const c of (kids.get(s.id) || [])) walk(c, d + 1); };
+  roots.sort((a, b) => a.kind - b.kind || a.born - b.born).forEach(r => walk(r, 0));
+  const c = $('treeCv'), RH = 20, w = Math.max(640, Math.min(840, innerWidth * .9 - 60)), h = rows.length * RH + 30, dpr = devicePixelRatio || 1;
+  c.style.width = w + 'px'; c.style.height = h + 'px'; c.width = w * dpr; c.height = h * dpr;
+  const g = c.getContext('2d'); g.scale(dpr, dpr); g.font = '11px system-ui'; g.textBaseline = 'middle';
+  if (!rows.length) { g.fillStyle = '#7d8b9c'; g.fillText('Noch keine Arten – setze Lebewesen aus.', 12, 15); return; }
+  const X0 = 12, X1 = w - 210, T = Math.max(tick, 1), X = t => X0 + t / T * (X1 - X0);
+  g.fillStyle = '#5d6b7c'; g.fillText('Start', X0, 10); g.textAlign = 'right'; g.fillText('jetzt (' + fmtTime(tick) + ')', X1, 10); g.textAlign = 'left';
+  for (const [s] of rows) {
+    const y = 26 + s._row * RH, xa = X(s.born), xb = X(s.count > 0 ? tick : s.ext), col = cssCol(s.col);
+    if (s._p >= 0) { const py = 26 + species[s._p]._row * RH; g.strokeStyle = '#3a4a5e'; g.beginPath(); g.moveTo(xa, py); g.lineTo(xa, y); g.stroke(); }
+    g.globalAlpha = s.count > 0 ? 1 : .4; g.strokeStyle = col; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(xa, y); g.lineTo(Math.max(xb, xa + 1), y); g.stroke(); g.lineWidth = 1;
+    g.fillStyle = col; g.fillText(s.name + (s.count > 0 ? '  (' + s.count + ')' : '  † ' + fmtTime(s.ext)), Math.max(xb, xa) + 10, y);
+    g.globalAlpha = 1;
+  }
+}
+
+// --- Einstellungen ---
+const GRIDS = [[160, 100], [240, 160], [320, 200], [400, 260]];
+function syncSettingsUI() {
+  $('rMut').value = settings.mut; $('oMut').textContent = settings.mut.toFixed(1) + '×';
+  $('rDay').value = settings.dayLen; $('oDay').textContent = settings.dayLen > 0 ? settings.dayLen + ' s' : 'Dauerlicht';
+  $('rAmb').value = settings.amb; $('oAmb').textContent = settings.amb + ' °C';
+  $('cOrb').checked = settings.orb;
+  const k = GRIDS.findIndex(g => g[0] === W && g[1] === H); if (k >= 0) $('sGrid').selectedIndex = k;
+}
+$('rMut').oninput = e => { settings.mut = +e.target.value; syncSettingsUI(); };
+$('rDay').oninput = e => { settings.dayLen = +e.target.value; syncSettingsUI(); stepLight(); };
+$('rAmb').oninput = e => { settings.amb = +e.target.value; for (let i = 0; i < N; i++) if (type[i] === VOID) temp[i] = settings.amb; syncSettingsUI(); };
+$('sGrid').onchange = e => { const g = GRIDS[e.target.selectedIndex]; if (confirm('Welt in ' + g[0] + '×' + g[1] + ' neu erstellen?')) { W = g[0]; H = g[1]; loadTemplate(curTemplate); } else syncSettingsUI(); };
+$('cOrb').onchange = e => {                                // Orb nachträglich ein-/ausschalten
+  settings.orb = e.target.checked;
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x;
+    if (settings.orb) { if (!inOrb(x, y, 0)) setCell(i, VOID); else if (!inOrb(x, y, 2.2)) setCell(i, GLASS); }
+    else if (type[i] === VOID) { setCell(i, EMPTY); o2[i] = 1; co2[i] = .45; } }
+  stepLight();
+};
+function fmtTime(t) { const s = (t / 60) | 0; return ((s / 60) | 0) + ':' + String(s % 60).padStart(2, '0'); }
+
+// ===== 9. Speichern / Laden / Vorlagen ===============================
+function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+function unb64(s) { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+function rle(u8) { const o = []; for (let i = 0; i < u8.length;) { const v = u8[i]; let n = 1; while (n < 255 && i + n < u8.length && u8[i + n] === v) n++; o.push(n, v); i += n; } return new Uint8Array(o); }
+function unrle(u8, len) { const o = new Uint8Array(len); let p = 0; for (let i = 0; i < u8.length; i += 2) { o.fill(u8[i + 1], p, p + u8[i]); p += u8[i]; } return o; }
+const u8of = a => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
+const r3 = v => Math.round(v * 1000) / 1000;
+function serialize() {
+  const q = f => b64(u8of(Uint16Array.from(f, v => clamp(v * 4000, 0, 65535))));
+  return { app: 'biosphere', v: 1, saved: Date.now(), W, H, tick, settings: Object.assign({}, settings), template: curTemplate, sampleEvery, nextAgentId,
+    keys: DEF.map(d => d.key),
+    cells: { type: b64(rle(type)), rnd: b64(rnd), life: b64(u8of(life)), age: b64(u8of(age)), temp: b64(u8of(Int16Array.from(temp, v => clamp(v * 8, -32000, 32000)))), o2: q(o2), co2: q(co2), nut: q(nut) },
+    agents: agents.filter(a => a.alive).map(a => ({ k: a.kind, x: r3(a.x), y: r3(a.y), e: r3(a.energy), a: a.age, n: r3(a.nstore), g: Array.from(a.g, r3), s: a.species, gen: a.gen, id: a.id, d: a.dir, egg: a.egg })),
+    species: species.map(s => s && { id: s.id, kind: s.kind, name: s.name, parent: s.parent, founder: s.founder.map(r3), born: s.born, ext: s.ext, peak: s.peak, h0: s.h0, hist: s.hist }),
+    hist };
+}
+function deserialize(o) {
+  if (!o || o.app !== 'biosphere') throw new Error('Keine BIOSPHERE-Datei');
+  W = o.W; H = o.H; allocate(W, H);
+  const map = o.keys.map(k => E[k] === undefined ? EMPTY : E[k]);            // Element-IDs über Schlüssel zuordnen
+  const ty = unrle(unb64(o.cells.type), N); for (let i = 0; i < N; i++) { type[i] = map[ty[i]]; rnd[i] = ri() & 63; }
+  if (o.cells.rnd) rnd.set(unb64(o.cells.rnd).subarray(0, N));
+  const u16 = s => { const u = unb64(s); return new Uint16Array(u.buffer, 0, N); };
+  life.set(u16(o.cells.life)); age.set(u16(o.cells.age));
+  const t16 = unb64(o.cells.temp), ti = new Int16Array(t16.buffer, 0, N); for (let i = 0; i < N; i++) temp[i] = ti[i] / 8;
+  const f = (s, d) => { const u = u16(s); for (let i = 0; i < N; i++) d[i] = u[i] / 4000; }; f(o.cells.o2, o2); f(o.cells.co2, co2); f(o.cells.nut, nut);
+  Object.assign(settings, o.settings); tick = o.tick; curTemplate = o.template || 'empty'; sampleEvery = o.sampleEvery || 60;
+  hist = o.hist; selAgent = null; newborn.length = 0;
+  species = o.species.map(s => s && Object.assign(s, { count: 0, col: geneColor(s.kind, s.founder) }));
+  agents = [];
+  for (const d of o.agents) { if (!species[d.s]) continue;
+    const a = newAgent(d.k, d.x, d.y, new Float32Array(d.g), d.s, d.gen); a.energy = d.e; a.age = d.a; a.nstore = d.n; a.id = d.id; a.dir = d.d || 1; a.egg = d.egg || 0; agents.push(a); }
+  nextAgentId = o.nextAgentId || agents.length + 1;
+  afterLoad();
+}
+function afterLoad() { setupCanvas(); stepLight(); sample(); syncSettingsUI(); buildCreature(); statsDirty = true; }
+const LS = 'biosphere.';
+function lsGet(k) { try { return localStorage.getItem(LS + k); } catch (e) { return null; } }
+function saveSlot(slot) {
+  try {
+    localStorage.setItem(LS + 'save.' + slot, JSON.stringify(serialize()));
+    const meta = JSON.parse(lsGet('meta') || '{}'); meta[slot] = { time: Date.now(), tick, pop: agents.length };
+    localStorage.setItem(LS + 'meta', JSON.stringify(meta)); return true;
+  } catch (e) { $('saveMsg').textContent = 'Speichern fehlgeschlagen: ' + e.message; return false; }
+}
+function loadSlot(slot) {
+  const s = lsGet('save.' + slot); if (!s) return false;
+  try { deserialize(JSON.parse(s)); return true; } catch (e) { $('saveMsg').textContent = 'Laden fehlgeschlagen: ' + e.message; return false; }
+}
+function refreshSlots() {
+  const meta = JSON.parse(lsGet('meta') || '{}'), box = $('slots'); box.innerHTML = '';
+  for (const [slot, label] of [['auto', 'Autosave'], ['1', 'Platz 1'], ['2', 'Platz 2'], ['3', 'Platz 3']]) {
+    const m = meta[slot], d = document.createElement('div'); d.className = 'slot';
+    d.innerHTML = '<b>' + label + '</b><span>' + (m ? new Date(m.time).toLocaleString('de-DE') + ' · Spielzeit ' + fmtTime(m.tick) + ' · ' + m.pop + ' Tiere' : 'leer') + '</span>';
+    const mk = (txt, fn, dis) => { const b = document.createElement('button'); b.textContent = txt; b.disabled = !!dis; b.onclick = fn; d.appendChild(b); };
+    mk('Speichern', () => { if (saveSlot(slot)) { $('saveMsg').textContent = label + ' gespeichert.'; refreshSlots(); } });
+    mk('Laden', () => { if (loadSlot(slot)) $('mWorld').classList.add('hide'); }, !m);
+    mk('Löschen', () => { try { localStorage.removeItem(LS + 'save.' + slot); delete meta[slot]; localStorage.setItem(LS + 'meta', JSON.stringify(meta)); } catch (e) { } refreshSlots(); }, !m);
+    box.appendChild(d);
+  }
+}
+$('bExport').onclick = () => {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(serialize())], { type: 'application/json' }));
+  a.download = 'biosphere-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+$('bImport').onclick = () => $('fImport').click();
+$('fImport').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => { deserialize(JSON.parse(t)); $('mWorld').classList.add('hide'); }).catch(err => { $('saveMsg').textContent = 'Import fehlgeschlagen: ' + err.message; });
+  e.target.value = '';
+};
+
+// --- Vorlagen ---
+function fillWhere(fn) { for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x; if (type[i] === EMPTY) { const t = fn(x, y); if (t) place(i, t); } } }
+function blob(cx, cy, r, t) { for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) if (x * x + y * y * 1.6 <= r * r) { const X = (cx + x) | 0, Y = (cy + y) | 0;
+  if (X > 0 && Y > 0 && X < W - 1 && Y < H - 1) { const i = Y * W + X; if (type[i] !== VOID && type[i] !== GLASS) place(i, t); } } }
+function scatter(n, cond, fn) { let k = 0; for (let tries = 0; k < n && tries < n * 300; tries++) { const x = 1 + ri() % (W - 2), y = 1 + ri() % (H - 2); if (cond(x, y, y * W + x)) { fn(x, y, y * W + x); k++; } } return k; }
+function plantAt(x, floorY, h) { for (let k = 1; k <= h; k++) { const i = (floorY - k) * W + x; if (isWater[type[i]] || type[i] === EMPTY) place(i, PLANT); else break; } }
+function lakeWorld(water, over, opts) {
+  newWorld(true);
+  const floor = x => Math.round(H * .78 + Math.sin(x * 15 / W) * H * .02 + Math.sin(x * 40 / W + 1) * H * .01), wl = Math.round(H * .27);
+  fillWhere((x, y) => { const f = floor(x);
+    if (opts.salt) return y >= f + 6 ? STONE : y >= f ? SAND : y >= wl ? water : 0;
+    return y >= f + 7 ? GRAVEL : y >= f + 3 ? SOIL : y >= f ? SAND : y >= wl ? water : 0; });
+  for (const fx of [.3, .56, .72]) blob(W * fx, floor((W * fx) | 0) - 1, 2 + ri() % 3, STONE);
+  if (opts.salt) for (const fx of [.38, .64]) blob(W * fx, floor((W * fx) | 0) + 1, 3, SALT);
+  initFields();
+  for (let k = 0; k < 10; k++) { const x = Math.round(W * (.2 + .6 * (k + rf() * .6) / 10)); let y = 1; while (y < H - 2 && !isSoil[type[y * W + x]]) y++; if (isSoil[type[y * W + x]]) plantAt(x, y, 2 + ri() % 4); }
+  const sc = N / 38400;
+  scatter(700 * sc, (x, y, i) => isWater[type[i]] && y < H * .65, (x, y, i) => place(i, ALGAE));
+  scatter(160 * sc, (x, y, i) => isWater[type[i]] && onSurf(i) && y < H * .7, (x, y, i) => place(i, ALGAE));
+  scatter(12 * sc, (x, y, i) => isWater[type[i]] && isSoil[type[i + W]], (x, y, i) => place(i, BACT));
+  scatter(50 * sc, (x, y, i) => isWater[type[i]], (x, y) => spawn(0, x, y, over));
+  scatter(Math.max(3, 6 * sc), (x, y, i) => isWater[type[i]] && y > H * .35 && y < H * .7, (x, y) => spawn(1, x, y, over));
+  const nS = Math.max(4, 10 * sc);
+  const got = scatter(nS, (x, y, i) => isWater[type[i]] && onSurf(i) && (type[i - 1] === ALGAE || type[i + 1] === ALGAE || type[i - W] === ALGAE || type[i + W] === ALGAE), (x, y) => spawn(2, x, y, over));
+  scatter(nS - got, (x, y, i) => isWater[type[i]] && onSurf(i), (x, y) => spawn(2, x, y, over));
+}
+const TEMPLATES = {
+  balanced: { name: 'Ausgeglichener Orb', make() { lakeWorld(WATER, null, {}); } },
+  volcano: { name: 'Vulkansee', make() {
+    newWorld(false);
+    const vx = W * .23, land = H * .5, bl = W * .46, br = W * .95, bf = H * .8;
+    const gy = x => { const cone = H * .2 + Math.abs(x - vx) * 1.15; let g = Math.min(land, cone);
+      if (x > bl && x < br) g = land + (bf - land) * clamp(Math.min(x - bl, br - x) / (W * .07), 0, 1); return g; };
+    fillWhere((x, y) => { const g = gy(x), lake = x > bl && x < br;
+      if (y >= g) return lake && y < g + 3 ? SAND : lake && y < g + 5 ? SOIL : (!lake && x > W * .34 && y < g + 2) ? SOIL : STONE;
+      return lake && y >= land + 3 ? WATER : 0; });
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {            // Schlot, Magmakammer, Erdwärme
+      const i = y * W + x, dx = (x - vx) / (W * .1), dy = (y - H * .74) / (H * .1);
+      if ((Math.abs(x - vx) < 3 && y > H * .2 && y < H * .74) || dx * dx + dy * dy < 1) place(i, LAVA);
+      else if (y >= bf + 7 && y <= bf + 8 && x > W * .5 && x < W * .62) place(i, HEATER);
+    }
+    initFields();
+    for (let k = 0; k < 6; k++) { const x = Math.round(W * (.66 + .25 * k / 6)); let y = 1; while (y < H - 2 && !isSoil[type[y * W + x]]) y++; plantAt(x, y, 2 + ri() % 3); }
+    for (let k = 0; k < 5; k++) { const x = Math.round(W * (.35 + .09 * k / 5)); let y = 1; while (y < H - 2 && type[y * W + x] === EMPTY) y++; if (type[y * W + x] === SOIL) place((y - 1) * W + x, PLANT); }
+    const sc = N / 38400, hot = { [G_TEMP]: .62 };
+    scatter(150 * sc, (x, y, i) => isWater[type[i]], (x, y, i) => place(i, ALGAE));
+    scatter(45 * sc, (x, y, i) => isWater[type[i]], (x, y) => spawn(0, x, y, hot));
+    scatter(4, (x, y, i) => isWater[type[i]] && isSoil[type[i + W]], (x, y) => spawn(2, x, y, hot));
+  } },
+  salt: { name: 'Salzmeer', make() { lakeWorld(SALTWATER, { [G_SALT]: .85 }, { salt: 1 }); } },
+  empty: { name: 'Leere Welt', make() { newWorld(settings.orb); initFields(); } }
+};
+function loadTemplate(key) {
+  curTemplate = key; TEMPLATES[key].make(); afterLoad();
+}
+for (const k in TEMPLATES) { const b = document.createElement('button'); b.textContent = TEMPLATES[k].name;
+  b.onclick = () => { loadTemplate(k); $('mWorld').classList.add('hide'); }; $('tplRow').appendChild(b); }
+
+// ===== Hauptschleife: fester Zeitschritt (60 Ticks/s), Rendering getrennt =====
+let last = performance.now(), acc = 0, fps = 60, frames = 0, tps = 0, tpsC = 0, tpsT = last;
+function frame(now) {
+  const dt = Math.min(100, now - last); last = now; fps += (1000 / Math.max(1, dt) - fps) * .05;
+  if (spawnAcc > 0) spawnAcc--;
+  if (down && hoverX >= 0) paintAt(hoverX, hoverY, down === 2);             // gedrückt halten = weiter streuen
+  if (!paused) {
+    acc += dt * speed; const ms = 1000 / 60, t0 = performance.now();
+    while (acc >= ms) { step(); acc -= ms; tpsC++; if (performance.now() - t0 > 13) { acc = 0; break; } }
+  }
+  render(); frames++;
+  if (now - tpsT > 1000) { tps = tpsC; tpsC = 0; tpsT = now; }
+  if (frames % 6 === 0) {
+    $('clock').textContent = (dayNow > .5 ? '☀' : '☾') + ' ' + fmtTime(tick) + ' · ' + (kindN[0] + kindN[1] + kindN[2]) + ' Tiere · ' + fps.toFixed(0) + ' FPS';
+    if (!$('secInsp').classList.contains('closed')) { updateCellInfo(); updateCreature(); }
+  }
+  if (statsDirty && frames % 10 === 0) { statsDirty = false; drawStats(); }
+  requestAnimationFrame(frame);
+}
+
+// ===== Start =========================================================
+buildPalette(); buildToolbar();
+new ResizeObserver(fit).observe($('stage'));
+if (!loadSlot('auto')) loadTemplate('balanced');
+showSection('secInsp', true); showSection('secStats', true);
+if (innerWidth < 900) { showSection('secInsp', false); showSection('secStats', false); }
+setInterval(() => { if (!paused) saveSlot('auto'); }, 60000);                // Autosave jede Minute
+$('hint').textContent = 'Linksklick zeichnen · Rechtsklick radieren · Mausrad Pinsel · Leertaste Pause · I Inspektor · S Statistik';
+setTimeout(() => { $('hint').style.display = 'none'; }, 12000);
+// Kleine Debug-/Test-Schnittstelle
+window.BIO = { step, stepN(n) { for (let k = 0; k < n; k++) step(); }, sample, counts, loadTemplate, serialize, deserialize, settings,
+  get tick() { return tick; }, get agents() { return agents; }, get species() { return species; }, get hist() { return hist; } };
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

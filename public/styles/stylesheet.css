@@ -1,0 +1,188 @@
+body {
+    background-color: #0B1418;
+    margin: 0;
+    padding: 0;
+    font-family: 'inter', sans-serif;
+}
+
+
+/* Navbar Style */
+
+.navbar ul {
+    list-style-type: none;
+    padding: 10px;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: flex-end;
+    margin: 1.5rem;
+    margin-top: 0rem;
+    border-bottom: 1px solid #22383F;
+}
+
+.navbar li {
+    display: inline;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.navbar li:first-child {
+    margin-right: auto;
+}
+
+.navbar a {
+    text-decoration: none;
+    color: #8FA6A0;
+    font-size: 1rem;
+    transition: color 0.3s ease;
+}
+
+.navbar a:hover {
+    color: #5FD68A;
+}
+
+.navlinkplay {
+    color: #3FB8C9 !important;
+}
+
+.navlinkplay:hover {
+    color: #F2B45A !important;
+}
+
+.logo {
+    height: 3.5rem;
+}
+
+
+/* Front Page Style */
+
+.frontpage {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: calc(50vh - 6rem);
+    padding: 0 10rem;
+    box-sizing: border-box;
+}
+
+.frontpage-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    flex: 1;
+    color: #8FA6A0;
+    justify-content: center;
+    min-width: 0;
+}
+
+.frontpage-visual {
+    width: clamp(14rem, 32vw, 40rem);
+    aspect-ratio: 1;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.frontpage-gif {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+@media (max-width: 700px) {
+    .frontpage {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        gap: 2rem;
+        padding: 2rem;
+    }
+    .frontpage-visual {
+        width: min(70vw, 24rem);
+        align-self: center;
+    }
+}
+
+.frontpage-content h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #E6F0EC;
+    font-family: Press start 2P, sans-serif;
+}
+
+.frontpage-content h2 {
+    font-size: 1.5rem;
+    margin-top: 3rem;
+    margin-bottom: 0.5rem;
+    color: #E6F0EC;
+    font-family: Press start 2P, sans-serif;
+}
+
+.frontpage-buttons {
+    display: flex;
+    gap: 1rem;
+}
+
+.frontpage-content button {
+    border: none;
+    width: 7.5rem;
+    height: 2.2rem;
+    box-sizing: border-box;
+    padding: 0;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.play-button {
+    background: linear-gradient(135deg, #5FD68A, #3FB8C9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #13232A;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: bold;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    width: 100%;
+    height: 100%;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 0 12px rgba(95, 214, 138, 0.65);
+}
+
+.learn-more-button {
+    background-color: #0B1418;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5FD68A;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: bold;
+    box-sizing: border-box;
+    border: 1px solid #5FD68A;
+    border-radius: 0.5rem;
+    width: 100%;
+    height: 100%;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.learn-more-button:hover {
+    background: #5FD68A;
+    color: #0B1418;
+    border-color: linear-gradient(315deg, #5FD68A, #F2B45A);
+    border-radius: 0.5rem;
+    box-shadow: 0 0 12px rgba(63, 184, 201, 0.65);
+}
+
+.play-button:hover {
+    background: linear-gradient(315deg, #5FD68A, #3FB8C9);
+    color: #0B1418;
+    border-radius: 0.5rem;
+    box-shadow: 0 0 18px rgba(63, 184, 201, 0.85);
+}
